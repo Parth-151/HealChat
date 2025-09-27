@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.log
+
+# Virtual Environment
+venv/
+env/
+.venv/
+
+# Django stuff
+db.sqlite3
+media/
+staticfiles/
+*.pot
+
+# IDE / OS files
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+
+# git rm --cached db.sqlite3
+# git rm --cached .env
+# git rm -r --cached venv
+# git rm -r --cached __pycache__
+# git rm -r --cached */__pycache__/
+# git rm -r --cached */*/__pycache__/
+# git rm -r --cached *.pyc
+# git rm -r --cached __pycache__/

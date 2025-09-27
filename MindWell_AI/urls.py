@@ -19,6 +19,6 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('chatbot.urls')),
-    path('/users', include('user.urls')),
+    path('api/chatbot/', include('chatbot.urls')),
+    path('users/', include('users.urls')),
 ]
