@@ -1,10 +1,11 @@
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chat Bot Login</title>
-  </head>
-  <body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
     <form id="login_form">
       <label for="username">Username</label>
       <input type="text" id="username" required />
@@ -25,7 +26,7 @@
         })
           .then((res) => {
             if (res.ok) {
-              window.location.href = "/chat"; // token is valid
+              window.location.href = "/chat.html"; // token is valid
             } else {
               localStorage.removeItem("authToken"); // invalid → clear and stay on login page
             }
@@ -50,9 +51,10 @@
           .then((data) => {
             if (data.status) {
               if (data.token) {
-                localStorage.setItem("authToken", data.token);
+                console.log(data.token)
+                localStorage.setItem("authToken", data.token.access);
               }
-              window.location.href = "/chat";
+              window.location.href = "/chat.html";
             } else {
               alert("Login failed: " + data.message);
             }

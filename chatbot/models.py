@@ -1,8 +1,8 @@
 from django.db import models
 
 class ChatMessage(models.Model):
-    message = models.CharField(max_length=300)
-    response = models.CharField(max_length=300)
+    message = models.TextField()
+    response = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -1,3 +1,4 @@
+from django.http import JsonResponse
 from django.shortcuts import render
 from rest_framework.response import Response 
 from rest_framework.views import APIView
@@ -7,15 +8,47 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from decouple import config
+import requests
+from django.conf import settings
 
 def AIresponse(user_msg):
-    if user_msg is None:
-        return "Message is required"
-    else:
-        return "Hey, have a good day"
+    short_prompt = f"Act as a Mental Health Chatbot. Give a concise reply (3-4 lines/sentences) to the user: '{user_msg}'"
+    payload = {
+        "contents": [
+            {"role": "user", "parts": [{"text": short_prompt}]}
+        ]
+    }
+    headers = {
+        "X-goog-api-key": settings.API_KEY,
+        "Content-Type": "application/json",
+    }
+    
+
+    try:
+        response = requests.post(settings.API_URL, headers=headers, json=payload)
+        print(response)
+        response.raise_for_status()  # Raise error for HTTP codes >= 400
+        data = response.json()
+
+        # Extract reply safely
+        try:
+            reply = data["candidates"][0]["content"]["parts"][0]["text"]
+            print(reply)
+        except (KeyError, IndexError):
+            reply = "Sorry, could not parse AI response."
+
+        return reply
+
+    except requests.exceptions.RequestException as e:
+        return f"API request error: {str(e)}"
+    except Exception as e:
+        return f"Error: {str(e)}"
+
 
 class ChatMessageView(APIView):
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         objs = ChatMessage.objects.all()
@@ -23,17 +56,17 @@ class ChatMessageView(APIView):
         return Response()
 
     def post(self, request):
-        obj = request.data.get('user_message')
+        usr_msg = request.data.get('user_message')
 
-        data = {'message':obj, 'response':str(AIresponse(obj))}
+        data = {'message':usr_msg, 'response':str(AIresponse(usr_msg))}
         serializer = MessageSerializer(data = data)
         if serializer.is_valid():
             serializer.save()
-            print(AIresponse(obj))
-            return Response(serializer.data)
-        return Response(serializer.errors)
+            return Response(serializer.data, status=201)
+        return Response(serializer.errors, status=400)
 
 @api_view(['post'])
+@permission_classes([AllowAny]) 
 def register(request):
     serializer = RegisterSerializer(data = request.data)
 
@@ -49,6 +82,7 @@ def validate_token(request):
     return Response({"status": True, "message": "Token is valid"})
 
 @api_view(["post"])
+@permission_classes([AllowAny]) 
 def login(request):
     serializer = LoginSerializer(data = request.data)
 
