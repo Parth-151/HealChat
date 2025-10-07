@@ -1,0 +1,347 @@
+/* Glass Effect Navbar */
+.navbar {
+  background: rgba(0, 0, 0, 0.3); /* Transparent */
+  backdrop-filter: blur(10px); /* Glass blur effect */
+  -webkit-backdrop-filter: blur(10px);
+  transition: background 0.4s ease;
+}
+
+/* Hover effect on nav links */
+.navbar-nav .nav-link {
+  color: white;
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.navbar-nav .nav-link:hover {
+  color: #00f0ff; /* Cyan hover */
+  transform: scale(1.05);
+}
+
+/* Logo square */
+.logo-square {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border: 2px solid white;
+  transition: transform 0.3s ease;
+}
+
+.logo-square:hover {
+  transform: rotate(10deg) scale(1.1);
+}
+
+/* Loader Background */
+#loader {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  background: #111;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  z-index: 9999;
+}
+
+/* Spinner Animation */
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid rgba(255, 255, 255, 0.3);
+  border-top: 5px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+#loader p {
+  margin-top: 15px;
+  font-size: 18px;
+}
+
+/* Navbar Glass Effect */
+.glass-nav {
+  background: rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(8px);
+  transition: background 0.3s ease;
+}
+
+.glass-nav:hover {
+  background: rgba(0, 0, 0, 0.8) !important;
+}
+
+/* Logo square */
+.logo-square {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border: 2px solid white;
+}
+
+/* Background Gradient + Animation */
+.ai-bg {
+  background: radial-gradient(circle at top left, #0f2027, #203a43, #2c5364);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  animation: bgMove 10s infinite alternate ease-in-out;
+}
+@keyframes bgMove {
+  0% { background-position: 0 0; }
+  100% { background-position: 100% 100%; }
+}
+
+/* Form Container - Glassmorphism */
+.ai-form-container {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  padding: 25px;
+  width: 350px;
+  border-radius: 15px;
+  box-shadow: 0 0 15px rgba(0,255,255,0.3);
+  border: 1px solid rgba(0, 255, 255, 0.2);
+  color: #fff;
+  animation: fadeIn 0.8s ease-in-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Title with Gradient */
+.ai-title {
+  text-align: center;
+  background: linear-gradient(90deg, #00f2fe, #4facfe);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+
+/* Inputs */
+.ai-input {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(0,255,255,0.3);
+  color: white;
+}
+.ai-input:focus {
+  box-shadow: 0 0 10px #00f2fe;
+  border-color: #00f2fe;
+}
+
+/* Buttons */
+.ai-btn {
+  background: linear-gradient(90deg, #00f2fe, #4facfe);
+  color: black;
+  font-weight: bold;
+  border: none;
+  transition: all 0.3s;
+}
+.ai-btn:hover {
+  box-shadow: 0 0 15px #00f2fe;
+  transform: scale(1.02);
+}
+
+/* Links */
+.ai-link {
+  color: #00f2fe;
+  text-decoration: none;
+}
+.ai-link:hover {
+  text-shadow: 0 0 5px #00f2fe;
+} 
+
+/* Common AI Theme */
+body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    color: white;
+    margin: 0;
+}
+
+.navbar {
+    backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.6) !important;
+}
+
+.nav-link:hover {
+    color: #00ffcc !important;
+    transition: 0.3s;
+}
+
+.ai-form-container {
+    max-width: 400px;
+    margin: 80px auto;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    box-shadow: 0 0 10px #00ffcc;
+}
+
+.ai-input {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.ai-btn {
+    background: #00ffcc;
+    border: none;
+    color: black;
+    font-weight: bold;
+}
+
+.ai-btn:hover {
+    background: #00d4aa;
+}
+
+/* Chatbox */
+.chat-container {
+    max-width: 600px;
+    margin: 50px auto;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 15px;
+    border-radius: 10px;
+    height: 500px;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.message {
+    padding: 8px;
+    margin: 5px;
+    border-radius: 8px;
+}
+
+.user-message {
+    background: #00ffcc;
+    color: black;
+    align-self: flex-end;
+}
+
+.bot-message {
+    background: #333;
+    color: white;
+    align-self: flex-start;
+}
+
+/* ===== AI Theme Background ===== */
+.ai-bg {
+  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ===== Form Container ===== */
+.ai-form-container {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 25px;
+  border-radius: 15px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  color: #fff;
+  width: 350px;
+}
+
+/* ===== Input Fields ===== */
+.ai-input {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.ai-input::placeholder {
+  color: rgba(255,255,255,0.7);
+}
+
+/* ===== Buttons ===== */
+.ai-btn {
+  background: linear-gradient(90deg, #00c6ff, #0072ff);
+  color: white;
+  font-weight: bold;
+  border-radius: 8px;
+  padding: 10px;
+  border: none;
+  transition: transform 0.2s ease;
+}
+
+.ai-btn:hover {
+  transform: scale(1.05);
+}
+
+/* ===== Links ===== */
+.ai-link {
+  color: #00c6ff;
+  text-decoration: none;
+}
+
+.ai-link:hover {
+  text-decoration: underline;
+}
+
+/* ===== Navbar Glass Effect ===== */
+.navbar {
+  background: rgba(255,255,255,0.1) !important;
+  backdrop-filter: blur(10px);
+}
+
+.navbar .nav-link {
+  color: white !important;
+  transition: color 0.3s ease;
+}
+
+.navbar .nav-link:hover {
+  color: #00c6ff !important;
+}
+
+/* ===== Profile Icon ===== */
+#usernameDisplay {
+  font-weight: bold;
+  color: #00c6ff;
+}
+
+/* ===== Chatbox ===== */
+.chat-container {
+  max-width: 800px;
+  margin: auto;
+  padding: 20px;
+}
+
+.chat-box {
+  height: 400px;
+  overflow-y: auto;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(5px);
+  padding: 15px;
+  color: white;
+}
+
+.chat-message {
+  margin: 8px 0;
+}
+
+.chat-message.user {
+  text-align: right;
+  color: #00c6ff;
+}
+
+.chat-message.bot {
+  text-align: left;
+  color: #fff;
+}
+

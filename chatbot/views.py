@@ -1,3 +1,4 @@
+import json
 from django.http import JsonResponse
 from django.shortcuts import render
 from rest_framework.response import Response 
@@ -13,26 +14,32 @@ from decouple import config
 import requests
 from django.conf import settings
 
-def AIresponse(user_msg):
-    short_prompt = f"Act as a Mental Health Chatbot. Give a concise reply (3-4 lines/sentences) to the user: '{user_msg}'"
+def AIresponse(user_msg, recent_msgs):
+    short_prompt = f"Act as a Mental Health Chatbot. Give a concise reply (3 to 4 lines) to the user: '{user_msg}'"
+
     payload = {
-        "contents": [
-            {"role": "user", "parts": [{"text": short_prompt}]}
-        ]
+        "contents": []
     }
+
+    for msg in reversed(recent_msgs):
+        payload["contents"].append({"role": "user", "parts": [{"text": msg.message}]})
+        payload["contents"].append({"role": "model", "parts": [{"text": msg.response}]})
+
+    payload["contents"].append({"role": "user", "parts": [{"text": short_prompt}]})
+
+    print("Payload:\n", json.dumps(payload, indent=2))
+
     headers = {
         "X-goog-api-key": settings.API_KEY,
         "Content-Type": "application/json",
     }
     
-
     try:
         response = requests.post(settings.API_URL, headers=headers, json=payload)
-        print(response)
-        response.raise_for_status()  # Raise error for HTTP codes >= 400
+        print(response.text)
+        response.raise_for_status()  
         data = response.json()
 
-        # Extract reply safely
         try:
             reply = data["candidates"][0]["content"]["parts"][0]["text"]
             print(reply)
@@ -51,54 +58,98 @@ class ChatMessageView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        objs = ChatMessage.objects.all()
-        serializer = MessageSerializer(objs, many=True)
-        return Response()
+        user_msgs = ChatMessage.objects.filter(user=request.user).order_by('-created_at')
+
+        user_msgs = list(user_msgs)[::-1]
+
+        # ✅ Serialize and return
+        serializer = MessageSerializer(user_msgs, many=True)
+        return Response(serializer.data)
+    # 
 
     def post(self, request):
         usr_msg = request.data.get('user_message')
+        recent_msgs = ChatMessage.objects.filter(user=request.user).order_by('-created_at')[:3]
+        recent_msgs = list(recent_msgs)[::-1]
+        ai_reply = AIresponse(usr_msg, recent_msgs)
+        invalid_responses = [
+            "API request error",
+            "Error:",
+            "Sorry, could not parse AI response."
+        ]
+        print(ai_reply)
+        if any(ai_reply.startswith(bad) for bad in invalid_responses):
 
-        data = {'message':usr_msg, 'response':str(AIresponse(usr_msg))}
-        serializer = MessageSerializer(data = data)
+            return Response(
+                {"error": "AI could not generate a valid response."},
+                status=500
+            )
+        data = {
+            'user': request.user.id,  
+            'message': usr_msg,
+            'response': ai_reply
+        }
+        serializer = MessageSerializer(data=data)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(user=request.user)  
             return Response(serializer.data, status=201)
-        return Response(serializer.errors, status=400)
+        else:
+            return Response(serializer.errors, status=400)
 
-@api_view(['post'])
-@permission_classes([AllowAny]) 
+@api_view(['POST'])
+@permission_classes([AllowAny])
 def register(request):
-    serializer = RegisterSerializer(data = request.data)
-
-    if not serializer.is_valid():
-        return Response({'status':False, 'messsage': serializer.errors})
-    
-    serializer.save()
-    return Response({'status':True, 'messsage': 'User created'})
+    serializer = RegisterSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(
+            {'status': True, 'message': 'User created successfully'},
+            status=status.HTTP_201_CREATED
+        )
+    return Response(
+        {'status': False, 'message': serializer.errors},
+        status=status.HTTP_400_BAD_REQUEST
+    )
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def validate_token(request):
     return Response({"status": True, "message": "Token is valid"})
 
-@api_view(["post"])
-@permission_classes([AllowAny]) 
+
+
+
+from rest_framework import status
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
 def login(request):
-    serializer = LoginSerializer(data = request.data)
+    username = request.data.get("username")
+    password = request.data.get("password")
 
-    if not serializer.is_valid():
-        return Response({'status':False, 'messsage': serializer.errors})
-    
-    user = authenticate(username = serializer.validated_data['username'], password = serializer.validated_data['password'])
+    if not username or not password:
+        return Response(
+            {"status": False, "message": "Username and password required"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
-    if user is not None:
+    user = authenticate(username=username, password=password)
+    if user:
         refresh = RefreshToken.for_user(user)
         return Response({
-            'status': True,
-            'message': 'User logged in',
-            'token': {
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
+            "status": True,
+            "message": "User logged in successfully",
+            "token": {
+                "refresh": str(refresh),
+                "access": str(refresh.access_token)
+            },
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email
             }
         })
-    return Response({'status': False, 'message': 'Invalid credentials'})
+    return Response(
+        {"status": False, "message": "Invalid credentials"},
+        status=status.HTTP_401_UNAUTHORIZED
+    )
