@@ -69,6 +69,7 @@
                 if (data.token) {
                   console.log(data.token);
                   localStorage.setItem("authToken", data.token.access);
+                  localStorage.setItem("UserName", data.user.username);
                 }
                 window.location.href = "./chat.html";
               } else {

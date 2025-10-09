@@ -117,8 +117,6 @@ def validate_token(request):
     return Response({"status": True, "message": "Token is valid"})
 
 
-
-
 from rest_framework import status
 
 @api_view(["POST"])
