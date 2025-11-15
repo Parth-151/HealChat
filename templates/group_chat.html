@@ -1,0 +1,31 @@
+<h1>{{ group.name }}</h1>
+<div id="chatBox">
+    {% for msg in messages %}
+        <div><strong>{{ msg.sender.username }}</strong>: {{ msg.content }}</div>
+    {% endfor %}
+</div>
+
+<form id="chatForm">
+    <input type="text" id="msgInput" autocomplete="off">
+    <button type="submit">Send</button>
+</form>
+
+<script>
+const slug = "{{ group.slug }}";
+const socket = new WebSocket(`ws://${window.location.host}/ws/groups/${slug}/`);
+
+socket.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+    const chatBox = document.getElementById("chatBox");
+    const div = document.createElement("div");
+    div.innerHTML = `<strong>${data.username}</strong>: ${data.message}`;
+    chatBox.appendChild(div);
+};
+
+document.getElementById("chatForm").onsubmit = function(e){
+    e.preventDefault();
+    const input = document.getElementById("msgInput");
+    socket.send(JSON.stringify({message: input.value}));
+    input.value = '';
+};
+</script>

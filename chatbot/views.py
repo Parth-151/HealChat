@@ -7,7 +7,7 @@ from .models import ChatMessage
 from .serializers import MessageSerializer, LoginSerializer, RegisterSerializer
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, login as django_login
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from decouple import config
@@ -133,6 +133,7 @@ def login(request):
 
     user = authenticate(username=username, password=password)
     if user:
+        django_login(request, user)
         refresh = RefreshToken.for_user(user)
         return Response({
             "status": True,
