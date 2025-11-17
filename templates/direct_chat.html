@@ -1,0 +1,24 @@
+<h2>Chat with {{ other_user.username }}</h2>
+
+{% for msg in messages %}
+<div id="messages">{{msg.sender}}: {{msg.content}}</div>
+{% endfor %}
+<input id="messageInput" placeholder="Type..." autocomplete="off">
+<button onclick="sendMessage()">Send</button>
+
+<script>
+const username = "{{ other_user.username }}";
+const ws = new WebSocket("ws://" + window.location.host + "/ws/chat/" + username + "/");
+
+ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    document.getElementById("messages").innerHTML += 
+        `<p><strong>${data.username}:</strong> ${data.message}</p>`;
+};
+
+function sendMessage() {
+    const msgInput = document.getElementById("messageInput");
+    ws.send(JSON.stringify({ message: msgInput.value }));
+    msgInput.value = "";
+}
+</script>
