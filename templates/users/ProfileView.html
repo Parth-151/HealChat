@@ -1,0 +1,47 @@
+<h2>{{ user.username }}'s Profile</h2>
+
+<img src="{{ profile.avatar.url }}" width="120" height="120">
+
+<p>Email: {{ user.email }}</p>
+<p>Bio: {{ profile.bio }}</p>
+
+<h3>Friends</h3>
+<ul>
+{% for friend in friends %}
+    <li>{{ friend.username }}</li>
+{% empty %}
+    <li>No friends yet.</li>
+{% endfor %}
+</ul>
+
+<a href="/edit-profile/">Edit Profile</a>
+<a href="/logout/">Logout</a>
+
+{% if is_friend %}
+    <form method="POST" action="/unfriend/{{ user.id }}/">
+        {% csrf_token %}
+        <button>Unfriend</button>
+    </form>
+
+{% elif request_sent %}
+    <button disabled>Request Sent</button>
+
+{% elif received_request %}
+    <form method="POST" action="/accept-request/{{ received_request.id }}/">
+        {% csrf_token %}
+        <button>Accept Request</button>
+    </form>
+
+{% else %}
+    <form method="POST" action="/send-request/{{ user.id }}/">
+        {% csrf_token %}
+        <button>Add Friend</button>
+    </form>
+{% endif %}
+
+<div class="analysis-box">
+    <h3>Your Overall Mental Summary</h3>
+    <p>Mood: {{ avg.mood }} / 100</p>
+    <p>Stress: {{ avg.stress }} / 100</p>
+    <p>Negative Thoughts: {{ avg.neg }}%</p>
+</div>

@@ -12,3 +12,12 @@ class ChatMessage(models.Model):
     
     def __str__(self):
         return self.message[0:30]+'...'
+    
+class AnalysisReport(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    mood_score = models.IntegerField()
+    stress_level = models.IntegerField()
+    negative_percentage = models.FloatField()
+    summary = models.TextField(null=True, blank=True)
+    risk_level = models.CharField(max_length=20, default="Low")
+    timestamp = models.DateTimeField(auto_now_add=True)

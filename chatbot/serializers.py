@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import ChatMessage
+from .models import AnalysisReport, ChatMessage
 from django.contrib.auth.models import User
 from rest_framework.validators import UniqueValidator
 
@@ -43,3 +43,8 @@ class MessageSerializer(serializers.ModelSerializer):
         model = ChatMessage
         fields = '__all__'
     
+class AnalysisReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AnalysisReport
+        fields = "__all__"
+        read_only_fields = ("user", "timestamp")

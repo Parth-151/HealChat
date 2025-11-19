@@ -1,0 +1,12 @@
+<h2>Your Friends</h2>
+<ul>
+    {% for f in friends %}
+        <li>
+            <a href="{% url 'users:profile' f.user.username %}">
+                {{ f.user.username }}
+            </a>
+        </li>
+    {% empty %}
+        <li>No friends yet.</li>
+    {% endfor %}
+</ul>

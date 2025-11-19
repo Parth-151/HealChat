@@ -3,8 +3,8 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from rest_framework.response import Response 
 from rest_framework.views import APIView
-from .models import ChatMessage
-from .serializers import MessageSerializer, LoginSerializer, RegisterSerializer
+from .models import AnalysisReport, ChatMessage
+from .serializers import AnalysisReportSerializer, MessageSerializer, LoginSerializer, RegisterSerializer
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from django.contrib.auth import authenticate, login as django_login
@@ -13,6 +13,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from decouple import config
 import requests
 from django.conf import settings
+from django.contrib.auth.decorators import login_required
 
 def AIresponse(user_msg, recent_msgs):
     short_prompt = f"Act as a Mental Health Chatbot. Give a concise reply (3 to 4 lines) to the user: '{user_msg}'"
@@ -152,3 +153,61 @@ def login(request):
         {"status": False, "message": "Invalid credentials"},
         status=status.HTTP_401_UNAUTHORIZED
     )
+
+
+
+def analyze_user(user):
+    from chatbot.models import ChatMessage
+    from group.models import GroupMessage, DirectMessage
+
+    texts = []
+
+    texts += list(ChatMessage.objects.filter(user=user).values_list("text", flat=True))
+    texts += list(GroupMessage.objects.filter(sender=user).values_list("content", flat=True))
+    texts += list(DirectMessage.objects.filter(sender=user).values_list("text", flat=True))
+
+    return " ".join(texts)
+
+
+import textblob
+
+def compute_scores(text):
+    blob = textblob.TextBlob(text)
+    polarity = blob.sentiment.polarity  # -1 to +1
+
+    mood = int((polarity + 1) * 50)   # convert to 0–100
+    stress = 100 - mood
+    negative = 100 if polarity < 0 else 0
+
+    return mood, stress, negative
+
+# @login_required
+# def analysis_page(request):
+#     text = analyze_user(request.user)
+#     mood, stress, negative = compute_scores(text)
+
+#     report = AnalysisReport.objects.create(
+#         user=request.user,
+#         mood_score=mood,
+#         stress_level=stress,
+#         negative_percentage=negative
+#     )
+
+#     return render(request, "analysis.html", {
+#         "mood": mood,
+#         "stress": stress,
+#         "negative": negative
+#     })
+
+from rest_framework import generics, permissions
+
+class AnalysisReportListCreateView(generics.ListCreateAPIView):
+    serializer_class = AnalysisReportSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        print(AnalysisReport.objects.filter(user=self.request.user))
+        return AnalysisReport.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Your Mental Health Analysis</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+</head>
+<body class="container mt-4">
+
+<h2 class="text-center">Your Emotional & Stress Analysis</h2>
+<hr>
+
+<div class="row">
+    <div class="col-md-6">
+        <canvas id="moodChart"></canvas>
+    </div>
+    <div class="col-md-6">
+        <canvas id="stressChart"></canvas>
+    </div>
+    <div class="col-md-6 mt-4">
+        <canvas id="circularChart"></canvas>
+    </div>
+</div>
+
+
+<h3 class="mt-5">Your Analysis Reports</h3>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Mood</th>
+            <th>Stress</th>
+            <th>Negative %</th>
+            <th>Risk</th>
+        </tr>
+    </thead>
+    <tbody id="reportTable"></tbody>
+</table>
+
+<script>
+const token = localStorage.getItem("authToken");
+
+fetch("http://127.0.0.1:8000/api/chatbot/reports", {
+    headers: { "Authorization": "Bearer " + token }
+})
+.then(res => res.json())
+.then(data => {
+    let moods = data.map(r => r.mood_score);
+    let stress = data.map(r => r.stress_level);
+    let dates = data.map(r => new Date(r.timestamp).toLocaleDateString());
+
+    // Fill table
+    let tbody = document.getElementById("reportTable");
+    data.forEach(r => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${new Date(r.timestamp).toLocaleString()}</td>
+                <td>${r.mood_score}</td>
+                <td>${r.stress_level}</td>
+                <td>${r.negative_percentage}%</td>
+                <td>${r.risk_level}</td>
+            </tr>
+        `;
+    });
+
+    // Mood chart
+    new Chart(document.getElementById("moodChart"), {
+        type: "line",
+        data: { labels: dates, datasets: [{ label: "Mood Score", data: moods }] }
+    });
+
+    // Stress chart
+    new Chart(document.getElementById("stressChart"), {
+        type: "line",
+        data: { labels: dates, datasets: [{ label: "Stress Level", data: stress }] }
+    });
+    // Circular chart (overall averages)
+let avgMood = Math.round(moods.reduce((a,b)=>a+b,0) / moods.length);
+let avgStress = Math.round(stress.reduce((a,b)=>a+b,0) / stress.length);
+
+new Chart(document.getElementById("circularChart"), {
+    type: "doughnut",
+    data: {
+        labels: ["Avg Mood", "Avg Stress"],
+        datasets: [{
+            data: [avgMood, avgStress],
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            title: {
+                display: true,
+                text: "Overall Mental Health Score"
+            }
+        }
+    }
+});
+
+});
+</script>
+
+</body>
+</html>
+

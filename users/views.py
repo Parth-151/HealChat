@@ -4,6 +4,8 @@ from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 
+from chatbot.models import AnalysisReport
+
 
 
 def login_page(request):
@@ -60,3 +62,110 @@ def signup_view(request):
         return redirect('/chat/kishan/') #todo: pass usename
     return render(request, 'signup.html')
 
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from .models import Profile, FriendRequest
+from .forms import ProfileUpdateForm
+
+@login_required
+def profile(request, username):
+    user_obj = get_object_or_404(User, username=username)
+    profile = user_obj.profile
+
+    # following/followers logic
+    is_following = request.user.profile.friends.filter(id=profile.id).exists()
+    follows_you = profile.friends.filter(id=request.user.profile.id).exists()
+
+    # analysis
+    last_report = AnalysisReport.objects.filter(user=user_obj).order_by("-timestamp").first()
+    short_analysis = None
+
+    if last_report:
+        short_analysis = {
+            "mood": last_report.mood_score,
+            "stress": last_report.stress_level,
+            "neg": last_report.negative_percentage,
+        }
+
+    from group.models import Group
+    groups = Group.objects.filter(members=user_obj)
+
+    return render(request, "users/profile.html", {
+        "user_obj": user_obj,
+        "profile": profile,
+        "is_following": is_following,
+        "follows_you": follows_you,
+        "groups": groups,
+        "short_analysis": short_analysis,
+    })
+
+
+
+
+
+@login_required
+def edit_profile(request):
+    profile = request.user.profile
+    if request.method == "POST":
+        form = ProfileUpdateForm(request.POST, request.FILES, instance=profile)
+        if form.is_valid():
+            form.save()
+            return redirect("users:profile", username=request.user.username)
+    else:
+        form = ProfileUpdateForm(instance=profile)
+
+    return render(request, "users/edit_profile.html", {"form": form})
+
+
+@login_required
+def send_request(request, username):
+    to_user = get_object_or_404(User, username=username)
+    FriendRequest.objects.get_or_create(from_user=request.user, to_user=to_user)
+    return redirect("users:profile", username=username)
+
+@login_required
+def friends_list(request):
+    friends = request.user.profile.friends.all()
+    return render(request, "users/friends_list.html", {"friends": friends})
+
+
+@login_required
+def accept_request(request, id):
+    req = get_object_or_404(FriendRequest, id=id)
+    # Add friendship
+    request.user.profile.friends.add(req.from_user.profile)
+    req.from_user.profile.friends.add(request.user.profile)
+    req.delete()
+    return redirect("users:profile", username=request.user.username)
+
+@login_required
+def follow_user(request, username):
+    user_to_follow = get_object_or_404(User, username=username)
+    request.user.profile.friends.add(user_to_follow.profile)
+    return redirect("users:profile", username=username)
+
+
+@login_required
+def unfollow_user(request, username):
+    user_to_unfollow = get_object_or_404(User, username=username)
+    request.user.profile.friends.remove(user_to_unfollow.profile)
+    return redirect("users:profile", username=username)
+
+@login_required
+def choose_avatar(request):
+    avatars = [
+        "default1.png",
+        "default2.png",
+        "default3.png",
+        "default4.png",
+    ]
+
+    if request.method == 'POST':
+        filename = request.POST.get("avatar")
+        request.user.profile.avatar = f"avatars/defaults/{filename}"
+        request.user.profile.save()
+        return redirect("users:profile", username=request.user.username)
+
+    return render(request, "users/choose_avatar.html", {"avatars": avatars})

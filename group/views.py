@@ -8,7 +8,7 @@ from django.db.models import Q
 @login_required
 def group_list(request):
     groups = Group.objects.all().order_by('-created_at')
-    return render(request, "group_list.html", {"groups": groups})
+    return render(request, "groups/group_list.html", {"groups": groups})
 
 @login_required
 def group_create(request):
@@ -22,14 +22,14 @@ def group_create(request):
             return redirect('group:group_chat', slug=grp.slug)
     else:
         form = CreateGroupForm()
-    return render(request, "group_create.html", {"form": form})
+    return render(request, "groups/group_create.html", {"form": form})
 
 @login_required
 def group_chat(request, slug):
     group = get_object_or_404(Group, slug=slug)
     is_member = group.members.filter(id=request.user.id).exists()
     messages = group.messages.select_related('sender').all().order_by('timestamp')[:200]
-    return render(request, "group_chat.html", {
+    return render(request, "groups/group_chat.html", {
         "group": group,
         "messages": messages,
         "is_member": is_member,
@@ -60,7 +60,7 @@ def direct_chat(request, slug):
     ).order_by("timestamp")
     print(messages)
 
-    return render(request, "direct_chat.html", {
+    return render(request, "chat/direct_chat.html", {
         "other_user": other_user,
         "messages": messages
     })
