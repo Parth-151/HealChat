@@ -17,26 +17,28 @@ class Group(models.Model):
         return self.name
 
 
+
+
 class GroupMessage(models.Model):
     group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name="messages")
     sender = models.ForeignKey(User, on_delete=models.CASCADE)
-    content = models.TextField()
+    content = models.TextField(blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
+    # who has seen this message (many-to-many to User)
+    seen_by = models.ManyToManyField(User, related_name="seen_group_messages", blank=True)
 
     class Meta:
         ordering = ("timestamp",)
-
-    def __str__(self):
-        return f"{self.sender}: {self.content[:30]}"
 
 class DirectMessage(models.Model):
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sent_messages")
     receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name="received_messages")
-    content = models.TextField()
+    content = models.TextField(blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
 
     class Meta:
         ordering = ("timestamp",)
 
-    def __str__(self):
-        return f"{self.sender} => {self.receiver}: {self.content[:25]}"
+
+

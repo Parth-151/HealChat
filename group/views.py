@@ -5,40 +5,69 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 
-def sidebar_data(request):
-    # Groups user is a member of
-    groups = Group.objects.filter(members=request.user)
-    print(groups)
+from django.http import JsonResponse
 
-    # Users recently chatted (direct messages)
-    direct_ids = DirectMessage.objects.filter(
-        Q(sender=request.user) | Q(receiver=request.user)
-    ).values_list("sender", "receiver")
+@login_required
+def search(request):
+    q = request.GET.get("q", "").strip()
+    users = []
+    groups = []
+    if q:
+        users_qs = User.objects.filter(username__icontains=q)[:10]
+        groups_qs = Group.objects.filter(name__icontains=q)[:10]
+    else:
+        users_qs = User.objects.none()
+        groups_qs = Group.objects.none()
 
-    user_ids = set()
-    for s, r in direct_ids:
-        if s != request.user.id:
-            user_ids.add(s)
-        if r != request.user.id:
-            user_ids.add(r)
+    for u in users_qs:
+        users.append({
+            "username": u.username,
+            "avatar": u.profile.get_avatar_url,
+        })
+    for g in groups_qs:
+        groups.append({
+            "name": g.name,
+            "slug": g.slug,
+        })
+    return JsonResponse({"users": users, "groups": groups})
 
-    recent_users = User.objects.filter(id__in=user_ids)
 
-    return groups, recent_users
+def sidebar_context(request):
+    if not request.user.is_authenticated:
+        return {}
+    # groups user belongs
+    groups_sidebar = Group.objects.filter(members=request.user).order_by("-created_at")
+    # recent direct chat users
+    direct_msgs = DirectMessage.objects.filter(Q(sender=request.user) | Q(receiver=request.user)).order_by("-timestamp")
+    user_ids = []
+    for dm in direct_msgs:
+        if dm.sender_id != request.user.id:
+            user_ids.append(dm.sender_id)
+        if dm.receiver_id != request.user.id:
+            user_ids.append(dm.receiver_id)
+    # unique and preserve order
+    seen = set()
+    recent_users = []
+    for uid in user_ids:
+        if uid not in seen and uid != request.user.id:
+            seen.add(uid)
+            recent_users.append(User.objects.get(id=uid))
+            if len(recent_users) >= 10:
+                break
+
+    return {"groups_sidebar": groups_sidebar, "recent_users": recent_users}
 
 
 @login_required
 def group_list(request):
-    groups, recent_users = sidebar_data(request)
-    return render(request, "groups/group_list.html", {
-        "groups": groups,
-        "recent_users": recent_users
-    })
+    context = sidebar_context(request)
+    return render(request, "groups/group_list.html", context)
+
 
 
 @login_required
 def group_create(request):
-    groups, recent_users = sidebar_data(request)
+    groups, recent_users = sidebar_context(request)
 
     if request.method == "POST":
         form = CreateGroupForm(request.POST)
@@ -56,23 +85,28 @@ def group_create(request):
         "groups": groups,
         "recent_users": recent_users
     })
-
 @login_required
 def group_chat(request, slug):
-    groups, recent_users = sidebar_data(request)
 
     group = get_object_or_404(Group, slug=slug)
     is_member = group.members.filter(id=request.user.id).exists()
 
-    messages = group.messages.select_related('sender').all().order_by('timestamp')[:200]
+    if request.method == "POST" and is_member:
+        content = request.POST.get("content", "").strip()
+        if content:
+            GroupMessage.objects.create(group=group, sender=request.user, content=content)
+            return redirect('group:group_chat', slug=slug)
 
-    return render(request, "groups/group_chat.html", {
+    messages = group.messages.select_related('sender').all()[:200]
+
+    context = sidebar_context(request)
+    context.update({
         "group": group,
         "messages": messages,
-        "is_member": is_member,
-        "groups_sidebar": groups,
-        "recent_users": recent_users
+        "is_member": is_member
     })
+
+    return render(request, "groups/group_chat.html", context)
 
 
 @login_required
@@ -88,24 +122,32 @@ def leave_group(request, slug):
     return redirect('group:group_list')
 
 User = get_user_model()
-
-
 @login_required
-def direct_chat(request, slug):
-    groups, recent_users = sidebar_data(request)
+def direct_chat(request, username):
+    from django.contrib.auth.models import User
+    from .models import Group, DirectMessage
 
-    other_user = get_object_or_404(User, username=slug)
+    other_user = get_object_or_404(User, username=username)
 
+    # Fetch chat messages
     messages = DirectMessage.objects.filter(
         Q(sender=request.user, receiver=other_user) |
         Q(sender=other_user, receiver=request.user)
     ).order_by("timestamp")
 
+    # Sidebar context (IMPORTANT)
+    groups_sidebar = Group.objects.filter(members=request.user)
+
+    # Recent direct chat users
+    recent_users = User.objects.filter(
+        Q(sent_messages__receiver=request.user) |
+        Q(received_messages__sender=request.user)
+    ).exclude(id=request.user.id).distinct()
+
     return render(request, "chat/direct_chat.html", {
         "other_user": other_user,
         "messages": messages,
-        "groups_sidebar": groups,
-        "recent_users": recent_users
+        "groups_sidebar": groups_sidebar,
+        "recent_users": recent_users,
     })
-
 

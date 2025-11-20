@@ -55,6 +55,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "users.middleware.UpdateLastSeenMiddleware",
 ]
 
 ROOT_URLCONF = 'MindWell_AI.urls'
@@ -75,7 +76,8 @@ TEMPLATES = [
     },
 ]
 
-ASGI_APPLICATION = 'MindWell_AI.asgi.application'
+ASGI_APPLICATION = "MindWell_AI.asgi.application"
+
 
 CHANNEL_LAYERS = {
     'default': {

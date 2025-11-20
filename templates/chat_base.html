@@ -1,82 +1,114 @@
+<!-- templates/chat_base.html -->
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{% block title %}Chat{% endblock %}</title>
-<style>
-:root{
-  --bg:#e9ecef; --panel:#fff; --muted:#9aa4af; --blue:#4aa3ff;
-  --bubble-right:#3a9bff; --bubble-left:#d7eaff;
-  font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
-}
-body{margin:0;background:var(--bg);}
-.frame{display:flex;height:100vh;width:100vw;overflow:hidden;}
-.left{width:260px;background:var(--panel);border-right:1px solid #eef2f5;padding:18px;display:flex;flex-direction:column;}
-.brand{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
-.brand img{width:40px;height:40px;border-radius:8px;}
-.brand h3{margin:0;font-size:16px;}
-.search input{width:100%;padding:10px 12px;border-radius:22px;border:1px solid #e1e6ea;font-size:13px;}
-.contacts{margin-top:6px;overflow:auto;flex:1;}
-.contact{display:flex;align-items:center;gap:10px;padding:10px 4px;border-radius:8px;cursor:pointer;}
-.contact img{width:44px;height:44px;border-radius:50%;}
-.middle{flex:1;display:flex;flex-direction:column;background:linear-gradient(180deg,#fbfdff,#fff);}
-.topbar{height:70px;display:flex;align-items:center;padding:14px 18px;border-bottom:1px solid #eef2f5;}
-.topbar img{width:48px;height:48px;border-radius:50%;}
-.messages{flex:1;padding:20px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;}
-.msg{max-width:70%;padding:12px 16px;border-radius:14px;font-size:14px;word-break:break-word;}
-.msg.left{background:var(--bubble-left);align-self:flex-start;}
-.msg.right{background:var(--bubble-right);color:white;align-self:flex-end;}
-.composer{height:80px;padding:12px 18px;border-top:1px solid #eef2f5;display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,#fff,#f7fbff);}
-.composer input{flex:1;padding:12px 14px;border-radius:24px;border:1px solid #e1e6ea;}
-.sendbtn{background:var(--blue);color:#fff;border:none;padding:12px 14px;border-radius:50%;cursor:pointer;font-size:18px;}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}Chat{% endblock %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body{background:#f6f7fb}
+    .sidebar { width:260px; background:#fff; position:fixed; left:0; top:0; bottom:0; padding:18px; overflow:auto; border-right:1px solid #e9ecef }
+    .content { margin-left:260px; padding:20px }
+    @media(max-width:900px){
+      .sidebar{ transform:translateX(-100%); transition:transform .25s }
+      .sidebar.open{ transform:translateX(0) }
+      .content { margin-left:0 }
+      #menuBtn { display:block }
+    }
+    #menuBtn{ display:none; position:fixed; top:12px; left:12px; z-index:1200 }
+    .msg-left{ background:#eef6ff; padding:10px 14px; border-radius:12px; display:inline-block; max-width:75% }
+    .msg-right{ background:#3a9bff; color:#fff; padding:10px 14px; border-radius:12px; display:inline-block; max-width:75% }
+    .contact-item{ display:flex; align-items:center; gap:10px; padding:8px; border-radius:8px }
+    .contact-item:hover{ background:#f4f6fb }
+    .unread-badge{ background:#dc3545; color:#fff; font-size:11px; padding:3px 7px; border-radius:999px }
+    .online-dot{ width:10px;height:10px;border-radius:50%;background:#4dd865; display:inline-block; margin-right:6px }
+  </style>
 </head>
 <body>
-<div class="frame">
-  <div class="left">
-    <div class="brand">
-      <img src="{% static 'avatars/defaults/default1.png' %}">
-      <h3>{{ request.user.username }}</h3>
-    </div>
-    <div class="search">
-      <input id="searchContact" placeholder="Search Users or Groups..." />
-    </div>
-    <div class="contacts" id="contactList">
-      <h5>Groups</h5>
-      
-      {% for g in groups %}
-        <div class="contact" onclick="window.location.href='{% url 'group:group_chat' g.slug %}'">
-          <img src="{% static 'avatars/defaults/default1.png' %}">
-          <div>{{ g.name }}</div>
-        </div>
-      {% endfor %}
-      <hr>
-      <h5>People</h5>
-      {% for u in random_people %}
-        <div class="contact" onclick="window.location.href='{% url 'group:direct_chat' u.username %}'">
-          <img src="{{ u.profile.get_avatar_url }}">
-          <div>{{ u.username }}</div>
-        </div>
-      {% endfor %}
-    </div>
+<button id="menuBtn" class="btn btn-light">☰</button>
+
+<div id="sidebar" class="sidebar">
+  <h5>Chats</h5>
+
+  <div class="mb-2">
+    <input id="sidebarSearch" class="form-control" placeholder="Search users/groups...">
   </div>
 
-  <div class="middle">
-    {% block chat_area %}{% endblock %}
+  <h6 class="mt-3">Groups</h6>
+  <ul class="list-unstyled">
+    {% for g in groups_sidebar %}
+      <li><a href="{% url 'group:group_chat' g.slug %}">{{ g.name }}</a></li>
+    {% empty %}
+      <li class="text-muted small">No groups</li>
+    {% endfor %}
+  </ul>
+  <div class="mt-2">
+    <a class="btn btn-sm btn-outline-success" href="{% url 'group:group_create' %}">+ Create Group</a>
   </div>
+
+  <hr>
+  <h6>Direct chats</h6>
+  <ul id="directList" class="list-unstyled">
+    {% for u in recent_users %}
+      <li class="my-1">
+        <a class="d-flex align-items-center gap-2 contact-item" href="{% url 'group:direct_chat' u.username %}">
+          <img src="{{ u.profile.get_avatar_url }}" style="width:40px;height:40px;border-radius:50%;object-fit:cover">
+          <div class="flex-grow-1">
+            <div class="d-flex justify-content-between">
+              <div>
+                {% if u.profile.is_online %}
+                  <span class="online-dot"></span>
+                {% endif %}
+                {{ u.username }}
+              </div>
+              
+            </div>
+          </div>
+        </a>
+      </li>
+    {% empty %}
+      <li class="text-muted small">No chats yet</li>
+    {% endfor %}
+  </ul>
+</div>
+
+<div class="content container-fluid">
+  {% block chat %}{% endblock %}
 </div>
 
 <script>
-const searchInput = document.getElementById("searchContact");
-const contacts = document.querySelectorAll(".contact");
-searchInput.addEventListener("keyup", function() {
-  const value = this.value.toLowerCase().trim();
-  contacts.forEach(c => {
-    c.style.display = c.innerText.toLowerCase().includes(value) ? "flex" : "none";
-  });
+document.getElementById("menuBtn").addEventListener("click", function(){
+  document.getElementById("sidebar").classList.toggle("open");
+});
+
+/* Sidebar search -> AJAX call to /chat/search/?q= */
+const searchInput = document.getElementById("sidebarSearch");
+let searchTimeout = null;
+searchInput && searchInput.addEventListener("keyup", function(){
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    const q = this.value.trim();
+    fetch(`/chat/search/?q=${encodeURIComponent(q)}`)
+      .then(r => r.json())
+      .then(data => {
+        // render groups + users in directList
+        const directList = document.getElementById("directList");
+        directList.innerHTML = "";
+        data.users.forEach(u => {
+          const li = document.createElement("li");
+          li.innerHTML = `<a class="d-flex align-items-center gap-2 contact-item" href="/group/chat/${u.username}/">
+            <img src="${u.avatar}" style="width:40px;height:40px;border-radius:50%;object-fit:cover">
+            <div>${u.username}</div>
+          </a>`;
+          directList.appendChild(li);
+        });
+      })
+      .catch(console.error);
+  }, 250);
 });
 </script>
+
 </body>
 </html>

@@ -1,43 +1,48 @@
-{% extends "chat_base.html" %}
-{% block chat_area %}
-<div class="topbar">
-  <img src="{{ other_user.profile.get_avatar_url }}">
-  <div style="margin-left:10px"><b>{{ other_user.username }}</b><br><small style="color:var(--muted)">Online</small></div>
-</div>
+{% extends 'chat_base.html' %}
+{% block chat %}
+<div class="card">
+  <div class="card-header"><h5>Chat with {{ other_user.username }}</h5></div>
+  <div id="messages" style="height:60vh;overflow:auto;padding:18px;">
+    {% for m in messages %}
+      <div class="mb-2 {% if m.sender == request.user %}text-end{% endif %}">
+        <div class="{% if m.sender == request.user %}msg-right{% else %}msg-left{% endif %}">
+          <strong>{{ m.sender.username }}</strong><br>{{ m.content|linebreaksbr }}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
 
-<div class="messages" id="messages">
-  {% for msg in messages %}
-    <div class="msg {% if msg.sender == request.user %}right{% else %}left{% endif %}">
-      <strong>{{ msg.sender.username }}</strong>: {{ msg.content }}
+  <div class="card-footer">
+    <div class="input-group">
+      <input id="msgInput" class="form-control" placeholder="Type a message...">
+      <button id="sendBtn" class="btn btn-primary">Send</button>
     </div>
-  {% endfor %}
-</div>
-
-<div class="composer">
-  <input id="msgBox" placeholder="Write Something..." autocomplete="off">
-  <button class="sendbtn" id="sendBtn">➤</button>
+  </div>
 </div>
 
 <script>
-const username = "{{ other_user.username }}";
-const socket = new WebSocket(`ws://${window.location.host}/ws/chat/${username}/`);
+const other = "{{ other_user.username }}";
+const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+const url = `${wsScheme}://${window.location.host}/ws/direct/${other}/`;
+const sock = new WebSocket(url);
 
-socket.onmessage = function(e){
-  const data = JSON.parse(e.data);
-  const messages = document.getElementById("messages");
+sock.onmessage = (ev) => {
+  const d = JSON.parse(ev.data);
+  const messagesDiv = document.getElementById("messages");
   const div = document.createElement("div");
-  div.className = data.sender === "{{ request.user.username }}" ? "msg right" : "msg left";
-  div.innerHTML = `<strong>${data.sender}</strong>: ${data.message}`;
-  messages.appendChild(div);
-  messages.scrollTop = messages.scrollHeight;
+  div.className = "mb-2";
+  div.innerHTML = `<div class="msg-left"><strong>${d.sender}</strong><br>${d.message}</div>`;
+
+  messagesDiv.appendChild(div);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
 };
 
-document.getElementById("sendBtn").onclick = ()=>{
-  const input = document.getElementById("msgBox");
-  if(input.value.trim()){
-    socket.send(JSON.stringify({message: input.value}));
-    input.value = '';
-  }
+document.getElementById("sendBtn").onclick = () => {
+  const input = document.getElementById("msgInput");
+  const v = input.value.trim();
+  if (!v) return;
+  sock.send(JSON.stringify({message: v}));
+  input.value = "";
 };
 </script>
 {% endblock %}

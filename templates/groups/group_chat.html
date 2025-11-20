@@ -1,43 +1,60 @@
-{% extends "chat_base.html" %}
-{% block chat_area %}
-<div class="topbar">
-  <img src="">
-  <div style="margin-left:10px"><b>{{ group.name }}</b><br><small style="color:var(--muted)">Online</small></div>
-</div>
-
-<div class="messages" id="messages">
-  {% for msg in messages %}
-    <div class="msg {% if msg.sender == request.user %}right{% else %}left{% endif %}">
-      <strong>{{ msg.sender.username }}</strong>: {{ msg.content }}
+{% extends 'chat_base.html' %}
+{% block chat %}
+<div class="card">
+  <div class="card-header d-flex align-items-center gap-3">
+    <h5 class="mb-0">{{ group.name }}</h5>
+    <div class="ms-auto">
+      {% if is_member %}
+        <span class="text-success small">Member</span>
+      {% else %}
+        <a class="btn btn-sm btn-primary" href="{% url 'group:join_group' group.slug %}">Join</a>
+      {% endif %}
     </div>
-  {% endfor %}
-</div>
+  </div>
 
-<div class="composer">
-  <input id="msgBox" placeholder="Write Something..." autocomplete="off">
-  <button class="sendbtn" id="sendBtn">➤</button>
+  <div id="messages" style="height:60vh; overflow:auto; padding:18px;">
+    {% for m in messages %}
+      <div class="{% if m.sender == request.user %}text-end{% endif %} mb-2">
+        <div class="{% if m.sender == request.user %}msg-right{% else %}msg-left{% endif %}">
+          <strong>{{ m.sender.username }}</strong><br>
+          {{ m.content|linebreaksbr }}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  {% if is_member %}
+  <div class="card-footer">
+    <div class="input-group">
+      <input id="msgInput" class="form-control" placeholder="Write a message...">
+      <button id="sendBtn" class="btn btn-primary">Send</button>
+    </div>
+  </div>
+  {% endif %}
 </div>
 
 <script>
 const slug = "{{ group.slug }}";
-const socket = new WebSocket(`ws://${window.location.host}/ws/groups/${slug}/`);
+const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+const wsUrl = `${wsScheme}://${window.location.host}/ws/groups/${slug}/`;
+const socket = new WebSocket(wsUrl);
 
-socket.onmessage = function(e){
-  const data = JSON.parse(e.data);
-  const messages = document.getElementById("messages");
+const messagesDiv = document.getElementById("messages");
+socket.onmessage = (e) => {
+  const d = JSON.parse(e.data);
   const div = document.createElement("div");
-  div.className = data.sender === "{{ request.user.username }}" ? "msg right" : "msg left";
-  div.innerHTML = `<strong>${data.sender}</strong>: ${data.message}`;
-  messages.appendChild(div);
-  messages.scrollTop = messages.scrollHeight;
+  div.className = "mb-2";
+  div.innerHTML = `<div class="msg-left"><strong>${d.sender}</strong><br>${d.message}</div>`;
+  messagesDiv.appendChild(div);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
 };
 
-document.getElementById("sendBtn").onclick = ()=>{
-  const input = document.getElementById("msgBox");
-  if(input.value.trim()){
-    socket.send(JSON.stringify({message: input.value}));
-    input.value = '';
-  }
+document.getElementById("sendBtn").onclick = () => {
+  const input = document.getElementById("msgInput");
+  const v = input.value.trim();
+  if (!v) return;
+  socket.send(JSON.stringify({message: v}));
+  input.value = "";
 };
 </script>
 {% endblock %}
