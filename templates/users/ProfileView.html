@@ -45,3 +45,705 @@
     <p>Stress: {{ avg.stress }} / 100</p>
     <p>Negative Thoughts: {{ avg.neg }}%</p>
 </div>
+
+hey, i am sending all files remove unnecessary parts, and any changes are required in code then also tell me where to change:
+views:
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login, logout
+from django.contrib import messages
+
+from chatbot.models import AnalysisReport
+
+
+
+def login_page(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        print(username)
+        print(password)
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            messages.success(request, 'Login successful!')
+            return redirect('/chat/admin/')
+        else:
+            messages.error(request, 'Invalid email or password. Please try again.')
+    if request.user.is_authenticated:
+        return redirect('/chat/admin/')
+    return render(request,'login.html')
+
+
+@login_required
+def logout_page(request):
+    logout(request)  
+    messages.success(request, 'You have been logged out successfully.') 
+    return redirect('/')
+
+
+def signup_view(request):
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        username = request.POST.get('username')
+        password1 = request.POST.get('password')
+        confirm_password = request.POST.get('confirm_password')
+
+        # Check if passwords match
+        if password1 != confirm_password:
+            messages.error(request, 'Passwords do not match. Please try again.')
+            return render(request, 'signup.html')
+
+        # Check if email is already taken
+        if User.objects.filter(email=email).exists():
+            messages.error(request, 'Email is already in use. Please try another.')
+            return render(request, 'signup.html')
+
+        # Create the new user
+        user = User.objects.create_user(username=username, 
+                                        email=email,
+                                        password=password1
+                                        )
+        user.save()
+        messages.success(request, 'Signup successful! You can now log in.')
+        return redirect('login')
+    if request.user.is_authenticated:
+        return redirect('/chat/kishan/') #todo: pass usename
+    return render(request, 'signup.html')
+
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from .models import Profile, FriendRequest
+from .forms import ProfileUpdateForm
+@login_required
+def profile(request, username):
+    user_obj = get_object_or_404(User, username=username)
+    profile = user_obj.profile
+
+    is_friend = request.user.profile.friends.filter(id=profile.id).exists()
+    request_sent = FriendRequest.objects.filter(from_user=request.user, to_user=user_obj).exists()
+    request_received = FriendRequest.objects.filter(from_user=user_obj, to_user=request.user).exists()
+
+    # Short analysis summary
+    last_report = AnalysisReport.objects.filter(user=user_obj).order_by("-timestamp").first()
+    short_analysis = None
+
+    if last_report:
+        short_analysis = {
+            "mood": last_report.mood_score,
+            "stress": last_report.stress_level,
+            "neg": last_report.negative_percentage,
+        }
+
+    return render(request, "users/profile.html", {
+        "user_obj": user_obj,
+        "profile": profile,
+        "is_friend": is_friend,
+        "request_sent": request_sent,
+        "request_received": request_received,
+        "short_analysis": short_analysis,
+    })
+
+
+
+
+
+
+@login_required
+def edit_profile(request):
+    profile = request.user.profile
+    if request.method == "POST":
+        form = ProfileUpdateForm(request.POST, request.FILES, instance=profile)
+        if form.is_valid():
+            form.save()
+            return redirect("users:profile", username=request.user.username)
+    else:
+        form = ProfileUpdateForm(instance=profile)
+
+    return render(request, "users/edit_profile.html", {"form": form})
+
+
+@login_required
+def send_request(request, username):
+    to_user = get_object_or_404(User, username=username)
+    if to_user != request.user:
+        FriendRequest.objects.get_or_create(from_user=request.user, to_user=to_user)
+    return redirect("users:profile", username=username)
+
+@login_required
+def friends_list(request):
+    friends = request.user.profile.friends.all()
+    return render(request, "users/friends_list.html", {"friends": friends})
+
+
+@login_required
+def accept_request(request, id):
+    req = get_object_or_404(FriendRequest, id=id)
+    from_user_profile = req.from_user.profile
+    to_user_profile = req.to_user.profile
+
+    from_user_profile.friends.add(to_user_profile)
+    to_user_profile.friends.add(from_user_profile)
+
+    req.delete()
+    return redirect("users:profile", username=request.user.username)
+
+@login_required
+def reject_request(request, id):
+    req = get_object_or_404(FriendRequest, id=id)
+    req.delete()
+    return redirect("users:profile", username=request.user.username)
+
+
+
+@login_required
+def follow_user(request, username):
+    user_to_follow = get_object_or_404(User, username=username)
+    request.user.profile.friends.add(user_to_follow.profile)
+    return redirect("users:profile", username=username)
+
+
+@login_required
+def unfollow_user(request, username):
+    user_to_unfollow = get_object_or_404(User, username=username)
+    request.user.profile.friends.remove(user_to_unfollow.profile)
+    return redirect("users:profile", username=username)
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.conf import settings
+from django.contrib.auth.models import User
+from .models import Profile
+from .forms import ProfileUpdateForm
+import os
+
+@login_required
+def choose_avatar(request):
+    defaults_dir = os.path.join(settings.BASE_DIR, "static", "avatars", "defaults")
+
+    avatars = [f for f in os.listdir(defaults_dir) if f.lower().endswith((".png",".jpg",".jpeg",".webp"))]
+
+    if request.method == "POST":
+        selected = request.POST.get("avatar")
+
+        if selected in avatars:
+            profile = request.user.profile
+            profile.preset_avatar = selected
+            profile.avatar = None  # Remove uploaded avatar
+            profile.save()
+        return redirect("users:profile", username=request.user.username)
+
+    return render(request, "users/choose_avatar.html", {"avatars": avatars})
+
+
+@login_required
+def cancel_request(request, username):
+    to_user = get_object_or_404(User, username=username)
+    FriendRequest.objects.filter(from_user=request.user, to_user=to_user).delete()
+    return redirect("users:profile", username=username)
+
+@login_required
+def unfriend(request, username):
+    other_user = get_object_or_404(User, username=username)
+    request.user.profile.friends.remove(other_user.profile)
+    other_user.profile.friends.remove(request.user.profile)
+
+    return redirect("users:profile", username=username)
+
+from django.db.models import Q
+import random
+
+@login_required
+def suggested_friends(request):
+    all_users = User.objects.exclude(id=request.user.id)
+
+    # Exclude friends
+    exclude_friends = request.user.profile.friends.all()
+    all_users = all_users.exclude(id__in=[u.user.id for u in exclude_friends])
+
+    # Exclude requested ones
+    sent = FriendRequest.objects.filter(from_user=request.user)
+    received = FriendRequest.objects.filter(to_user=request.user)
+
+    all_users = all_users.exclude(id__in=[r.to_user.id for r in sent])
+    all_users = all_users.exclude(id__in=[r.from_user.id for r in received])
+
+    # Random subset
+    suggested = random.sample(list(all_users), min(10, len(all_users)))
+
+    return render(request, "users/suggested.html", {"suggested": suggested})
+choose_avatars.html:
+{% extends "users/sidebar_base.html" %}
+{% load static %}
+{% block content %}
+<h3>Choose a Default Avatar</h3>
+
+<form method="POST">
+  {% csrf_token %}
+  <div class="d-flex flex-wrap gap-3 mt-3">
+    {% for fname in avatars %}
+      <label style="cursor:pointer;">
+        <input type="radio" name="avatar" value="{{ fname }}" style="display:none;">
+        <img src="{% static 'avatars/defaults/'|add:fname %}" width="96" height="96" style="border-radius:12px; border:2px solid transparent;">
+      </label>
+    {% endfor %}
+  </div>
+
+  <button class="btn btn-primary mt-3">Save Avatar</button>
+</form>
+
+<script>
+  // small UX: highlight selected avatar
+  document.querySelectorAll('label').forEach(l => {
+    l.addEventListener('click', () => {
+      document.querySelectorAll('label img').forEach(img => img.style.borderColor = 'transparent');
+      l.querySelector('img').style.borderColor = '#3b82f6';
+    });
+  });
+</script>
+{% endblock %}
+
+ edit_profile.html:
+{% extends "users/sidebar_base.html" %}
+{% block content %}
+<h3>Edit Profile</h3>
+
+<form method="POST" enctype="multipart/form-data">
+  {% csrf_token %}
+  <div class="mb-3">
+    <label class="form-label">Bio</label>
+    {{ form.bio }}
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Upload Avatar</label>
+    {{ form.avatar }}
+    <div class="form-text">PNG/JPG. Or you can choose a default avatar <a href="{% url 'users:choose_avatar' %}">here</a>.</div>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Emergency Contact Name</label>
+    {{ form.emergency_name }}
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Emergency Contact Phone</label>
+    {{ form.emergency_phone }}
+  </div>
+
+  <button class="btn btn-primary">Save</button>
+</form>
+{% endblock %}
+
+profile.html:
+{% extends "users/sidebar_base.html" %}
+{% load static %}
+
+{% block title %}Profile - {{ user_obj.username }}{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+  <div class="card-body">
+    <div class="d-flex gap-4">
+      <div>
+        {% if profile.avatar and profile.avatar.url %}
+    <img src="{{ profile.avatar.url }}" class="avatar-lg">
+{% elif profile.avatar and profile.avatar.name %}
+    <img src="{% static 'avatars/defaults/' %}{{ profile.avatar.name }}" class="avatar-lg">
+{% else %}
+    <img src="{% static 'avatars/defaults/default1.png' %}" class="avatar-lg">
+{% endif %}
+
+      </div>
+
+      <div class="flex-grow-1">
+        <h3 class="mb-1">{{ user_obj.get_full_name|default:user_obj.username }}</h3>
+        <p class="text-muted mb-2">{{ user_obj.email }}</p>
+        <p>{{ profile.bio|default:"No bio yet." }}</p>
+
+        {% if request.user != user_obj %}
+          {% if is_following %}
+            <a href="{% url 'users:unfollow_user' user_obj.username %}" class="btn btn-outline-danger btn-sm">Unfollow</a>
+          {% else %}
+            <a href="{% url 'users:follow_user' user_obj.username %}" class="btn btn-primary btn-sm">Follow</a>
+          {% endif %}
+          <a href="{% url 'users:profile' user_obj.username %}" class="btn btn-secondary btn-sm ms-2">Message</a>
+        {% else %}
+          <a href="{% url 'users:edit_profile' %}" class="btn btn-primary btn-sm">Edit Profile</a>
+          <a href="{% url 'users:choose_avatar' %}" class="btn btn-outline-secondary btn-sm ms-2">Choose Avatar</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <hr>
+
+    <div class="row">
+      <div class="col-md-6">
+        <h6>Short Analysis</h6>
+        {% if short_analysis %}
+          <div>Mood: <strong>{{ short_analysis.mood }}</strong></div>
+          <div>Stress: <strong>{{ short_analysis.stress }}</strong></div>
+          <div>Negative %: <strong>{{ short_analysis.negative }}</strong></div>
+          <a href="/chatbot/analysis/" class="btn btn-sm btn-outline-primary mt-2">View full analysis</a>
+        {% else %}
+          <p class="text-muted">No analysis available yet.</p>
+        {% endif %}
+      </div>
+
+      <div class="col-md-6">
+        <h6>Groups</h6>
+        {% if groups %}
+          <ul class="list-unstyled">
+            {% for g in groups %}
+              <li><a href="/groups/{{ g.slug }}/">{{ g.name }}</a></li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-muted">Not in any groups</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+
+friends_list.html:
+{% extends "users/sidebar_base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="p-4">
+
+    <h2 class="fw-bold mb-4">Your Friends</h2>
+
+    {% if friends %}
+        <div class="row g-4">
+            {% for friend in friends %}
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0 rounded-4">
+                    <div class="card-body text-center">
+
+                        <img src="{{ friend.get_avatar_url }}" 
+                             class="rounded-circle mb-3"
+                             style="width: 120px; height: 120px; object-fit: cover;">
+
+                        <h5 class="fw-semibold">{{ friend.user.username }}</h5>
+                        <p class="text-muted small mb-3">{{ friend.user.email }}</p>
+
+                        <a href="{% url 'users:profile' friend.user.username %}" 
+                           class="btn btn-outline-primary btn-sm rounded-pill px-4">
+                           View Profile
+                        </a>
+
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+    {% else %}
+        <div class="alert alert-info rounded-4 shadow-sm">
+            You don't have any friends yet.  
+            <a href="{% url 'users:suggested' %}" class="fw-semibold">Find new friends →</a>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+sidebar.html:
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}User Panel{% endblock %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    body { background: #f8f9fa; }
+
+    .sidebar {
+      height: 100vh;
+      background: #ffffff;
+      border-right: 1px solid #e5e5e5;
+      padding: 20px;
+      position: sticky;
+      top: 0;
+    }
+
+    .avatar-sm {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .sidebar a.nav-link {
+      color: #555;
+      margin-bottom: 6px;
+      border-radius: 8px;
+      padding: 8px 12px;
+    }
+
+    .sidebar a.nav-link.active,
+    .sidebar a.nav-link:hover {
+      background: #eef5ff;
+      color: #0d6efd !important;
+    }
+
+    .friend-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .content-area {
+      padding: 25px;
+    }
+  </style>
+</head>
+
+<body>
+<div class="container-fluid">
+  <div class="row g-0">
+
+    <!-- ========================= SIDEBAR ========================= -->
+    <div class="col-md-3 sidebar">
+
+      <!-- User Info -->
+      <div class="d-flex align-items-center mb-4">
+
+        {% if request.user.profile.avatar %}
+          <img src="{{ request.user.profile.avatar.url }}" class="avatar-sm me-2">
+        {% else %}
+          <img src="{% static 'avatars/defaults/default1.png' %}" class="avatar-sm me-2">
+        {% endif %}
+
+        <div>
+          <div class="fw-bold">{{ request.user.username }}</div>
+          <small class="text-muted">{{ request.user.email }}</small>
+        </div>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="nav flex-column mb-4">
+        <a class="nav-link {% if request.path == '/users/profile/' %}active{% endif %}"
+           href="{% url 'users:profile' request.user.username %}">Profile</a>
+
+        <a class="nav-link" href="{% url 'users:edit_profile' %}">Edit Profile</a>
+        <a class="nav-link" href="{% url 'users:choose_avatar' %}">Choose Avatar</a>
+
+        <a class="nav-link" href="{% url 'users:friends' %}">Friends</a>
+        <a class="nav-link" href="{% url 'users:groups' %}">Groups</a>
+
+        <a class="nav-link text-danger" href="">Logout</a>
+      </nav>
+
+      <!-- Friends List -->
+      <h6 class="fw-bold mb-2">Your Friends</h6>
+      {% if friends %}
+        {% for f in friends %}
+          <div class="d-flex align-items-center mb-2">
+            <img src="{{ f.profile.avatar.url if f.profile.avatar else static('avatars/defaults/default1.png') }}"
+                 class="friend-avatar me-2">
+
+            <a href="{% url 'users:profile' f.username %}">{{ f.username }}</a>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="text-muted small">No friends yet.</p>
+      {% endif %}
+      <hr>
+
+      <!-- Random People -->
+      <h6 class="fw-bold mb-2">People You May Know</h6>
+
+      {% for p in random_people %}
+        <div class="d-flex align-items-center mb-2">
+
+          <img src="{{ p.profile.avatar.url if p.profile.avatar else static('avatars/defaults/default1.png') }}"
+               class="friend-avatar me-2">
+
+          <div class="flex-grow-1">
+            <a href="{% url 'users:profile' p.username %}">{{ p.username }}</a>
+          </div>
+
+          <a href="{% url 'users:send_request' p.username %}" class="btn btn-sm btn-primary">
+            Add
+          </a>
+        </div>
+      {% endfor %}
+
+    </div>
+
+    <!-- ========================= CONTENT ========================= -->
+    <div class="col-md-9 content-area">
+      {% block content %}{% endblock %}
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
+suggested.html:
+{% extends "users/sidebar_base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="p-4">
+
+    <h2 class="fw-bold mb-4">People You May Know</h2>
+
+    {% if suggested %}
+        <div class="row g-4">
+
+            {% for user in suggested %}
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0 rounded-4">
+                    <div class="card-body text-center">
+
+                        <img src="{{ user.profile.get_avatar_url }}"
+                             class="rounded-circle mb-3"
+                             style="width: 120px; height: 120px; object-fit: cover;">
+
+                        <h5 class="fw-semibold">{{ user.username }}</h5>
+                        <p class="text-muted small">{{ user.email }}</p>
+
+                        <div class="d-flex justify-content-center gap-2 mt-3">
+
+                            <a href="{% url 'users:profile' user.username %}"
+                               class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                                View
+                            </a>
+
+                            <a href="{% url 'users:send_request' user.username %}"
+                               class="btn btn-primary btn-sm rounded-pill px-4">
+                                Add Friend
+                            </a>
+
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+        </div>
+    {% else %}
+        <div class="alert alert-info rounded-4 shadow-sm">
+            No new people found. Try again later!
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+context_processors.py:
+from django.contrib.auth.models import User
+
+def sidebar_data(request):
+    if not request.user.is_authenticated:
+        return {}
+
+    friends = request.user.profile.friends.all()
+
+    random_people = User.objects.exclude(id=request.user.id).order_by('?')[:5]
+
+    return {
+        "friends": friends,
+        "random_people": random_people
+    }
+urls:
+
+from django.urls import path
+from users.views import login_page, logout_page, signup_view
+from . import views
+
+app_name = 'users'
+
+urlpatterns = [
+    path('login', login_page, name="login"),
+    path('logout/', logout_page, name="logout"),
+    path('signup/', signup_view, name="signup"),
+    path("profile/<str:username>/", views.profile, name="profile"),
+    path("edit/", views.edit_profile, name="edit_profile"),
+    path("send/<str:username>/", views.send_request, name="send_request"),
+    path("accept/<int:id>/", views.accept_request, name="accept_request"),
+    path("choose-avatar/", views.choose_avatar, name="choose_avatar"),
+    path("follow/<str:username>/", views.follow_user, name="follow_user"),
+    path("unfollow/<str:username>/", views.unfollow_user, name="unfollow_user"),
+    path("friends/", views.friends_list, name="friends_list"),
+]
+models:
+from django.db import models
+from django.contrib.auth.models import User
+
+def upload_avatar(instance, filename):
+    return f"avatars/{instance.user.username}/{filename}"
+
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+
+    avatar = models.ImageField(upload_to=upload_avatar, blank=True, null=True)
+    preset_avatar = models.CharField(max_length=255, blank=True, null=True)
+
+    bio = models.TextField(blank=True, null=True)
+
+    # Friendship
+    friends = models.ManyToManyField("self", blank=True, symmetrical=True)
+
+    # Emergency Contact
+    emergency_name = models.CharField(max_length=100, blank=True, null=True)
+    emergency_phone = models.CharField(max_length=20, blank=True, null=True)
+
+    def get_avatar_url(self):
+        """
+        Priority:
+        1. Uploaded avatar
+        2. preset avatar (static)
+        3. default avatar
+        """
+        if self.avatar:
+            return self.avatar.url
+        
+        if self.preset_avatar:
+            return f"/static/avatars/defaults/{self.preset_avatar}"
+
+        return "/static/avatars/defaults/default1.png"
+
+    def __str__(self):
+        return self.user.username
+
+
+class FriendRequest(models.Model):
+    from_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sent_requests")
+    to_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="received_requests")
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.from_user} → {self.to_user}"
+ signals:
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.contrib.auth.models import User
+from .models import Profile
+
+@receiver(post_save, sender=User)
+def create_profile(sender, instance, created, **kwargs):
+    if created:
+        Profile.objects.create(user=instance)
+profile_update.py:
+from django import forms
+from .models import Profile
+
+class ProfileUpdateForm(forms.ModelForm):
+    class Meta:
+        model = Profile
+        fields = ["avatar", "bio", "emergency_name", "emergency_phone"]
+also tell me why do i need context_processors file, tell me which 
+things i am missing and which parts are still left to work on 
+

@@ -1,106 +1,73 @@
+{% extends "users/sidebar_base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>{{ user_obj.username }}'s Profile</title>
 
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f3f3f3;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding-top: 40px;
-        }
-        .card {
-            width: 450px;
-            background: #fff;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        }
-        .profile-img {
-            width: 100px; height: 100px;
-            border-radius: 50%;
-            overflow: hidden;
-            background: #ddd;
-        }
-        .profile-img img {
-            width: 100%; height: 100%;
-            object-fit: cover;
-        }
-        .btn {
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            border: none;
-            font-size: 15px;
-        }
-        .btn-primary { background: #7b39f2; color: #fff; }
-        .btn-gray { background: #ccc; }
-        a { text-decoration: none; color: #7b39f2; }
-    </style>
+{% block title %}{{ user_obj.username }} | Profile{% endblock %}
 
-</head>
-<body>
+{% block content %}
+<div class="card shadow-sm p-4 mb-4">
 
-<div class="card">
-    <h2>{{ user_obj.username }}'s Profile</h2>
+    <div class="d-flex flex-column flex-md-row align-items-center gap-4">
 
-    <div style="display:flex; gap:20px; align-items:center;">
-        <div class="profile-img">
-            {% if profile.avatar %}
-                <img src="{{ profile.avatar.url }}" alt="Avatar">
+        <!-- Avatar -->
+        <div class="text-center">
+            {% if profile.avatar and profile.avatar.url %}
+                <img src="{{ profile.avatar.url }}" class="rounded-circle shadow-sm" style="width:160px; height:160px; object-fit:cover;">
+            {% elif profile.preset_avatar %}
+                <img src="{% static 'avatars/defaults/'|add:profile.preset_avatar %}" class="rounded-circle shadow-sm" style="width:160px; height:160px; object-fit:cover;">
             {% else %}
-                <img src="{% static 'default-avatar.png' %}">
+                <img src="{% static 'avatars/defaults/default1.png' %}" class="rounded-circle shadow-sm" style="width:160px; height:160px; object-fit:cover;">
             {% endif %}
         </div>
 
-        <div>
-            <p><strong>Email:</strong> {{ user_obj.email }}</p>
-            <p><strong>Bio:</strong> {{ profile.bio|default:"No bio" }}</p>
+        <!-- Info -->
+        <div class="flex-grow-1 w-100">
+            <h3 class="fw-bold mb-1">{{ user_obj.get_full_name|default:user_obj.username }}</h3>
+            <p class="text-muted mb-2">{{ user_obj.email }}</p>
+            <p class="mb-3">{{ profile.bio|default:"No bio added yet." }}</p>
+
+            {% if is_owner %}
+                <a href="{% url 'users:edit_profile' %}" class="btn btn-primary btn-sm me-2">Edit Profile</a>
+                <a href="{% url 'users:choose_avatar' %}" class="btn btn-outline-secondary btn-sm">Choose Avatar</a>
+            {% else %}
+                <a href="{% url 'chat:private_chat' user_obj.username %}" class="btn btn-primary btn-sm">Message</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Analysis + Groups Section -->
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card shadow-sm p-3">
+            <h5 class="fw-bold">Short Analysis</h5>
+            <hr>
+            {% if short_analysis %}
+                <ul class="list-unstyled">
+                    <li>Mood: <strong>{{ short_analysis.mood }}</strong></li>
+                    <li>Stress: <strong>{{ short_analysis.stress }}</strong></li>
+                    <li>Negative: <strong>{{ short_analysis.negative }}%</strong></li>
+                </ul>
+                <a href="/chatbot/analysis/" class="btn btn-outline-primary btn-sm">View full analysis</a>
+            {% else %}
+                <p class="text-muted">No analysis available.</p>
+            {% endif %}
         </div>
     </div>
 
-    <br>
-
-    <!-- FRIEND BUTTONS -->
-    {% if user != user_obj %}
-        {% if friend_status == "none" %}
-            <a class="btn btn-primary" href="{% url 'users:send_request' username=user_obj.username %}">
-                Send Friend Request
-            </a>
-
-        {% elif friend_status == "sent" %}
-            <button class="btn btn-gray">Request Sent</button>
-
-        {% elif friend_status == "received" %}
-            <a class="btn btn-primary" href="{% url 'users:accept_request' id=pending_request_id %}">
-                Accept Request
-            </a>
-
-        {% elif friend_status == "friends" %}
-            <button class="btn btn-gray">Friends</button>
-        {% endif %}
-    {% endif %}
-
-    <br><br>
-
-    <h3>Your Summary</h3>
-    {% if short_analysis %}
-        <p>Mood Score: {{ short_analysis.mood }}</p>
-        <p>Stress Level: {{ short_analysis.stress }}</p>
-        <p>Negative %: {{ short_analysis.negative }}</p>
-    {% else %}
-        <p>No analysis available.</p>
-    {% endif %}
-
-    <br>
-
-    <a href="{% url 'users:edit_profile' %}">Edit Profile</a>
+    <div class="col-md-6">
+        <div class="card shadow-sm p-3">
+            <h5 class="fw-bold">Groups</h5>
+            <hr>
+            {% if groups %}
+                <ul class="list-unstyled">
+                    {% for g in groups %}
+                        <li><a href="/groups/{{ g.slug }}/">{{ g.name }}</a></li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-muted">Not part of any groups.</p>
+            {% endif %}
+        </div>
+    </div>
 </div>
-
-</body>
-</html>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "users/sidebar_base.html" %}
+{% load static %}
+{% block content %}
+<h3>Choose a Default Avatar</h3>
+
+<form method="POST">
+  {% csrf_token %}
+  <div class="d-flex flex-wrap gap-3 mt-3">
+    {% for fname in avatars %}
+      <label style="cursor:pointer;">
+        <input type="radio" name="avatar" value="{{ fname }}" style="display:none;">
+        <img src="{% static 'avatars/defaults/'|add:fname %}" width="96" height="96" style="border-radius:12px; border:2px solid transparent;">
+      </label>
+    {% endfor %}
+  </div>
+
+  <button class="btn btn-primary mt-3">Save Avatar</button>
+</form>
+
+<script>
+  // small UX: highlight selected avatar
+  document.querySelectorAll('label').forEach(l => {
+    l.addEventListener('click', () => {
+      document.querySelectorAll('label img').forEach(img => img.style.borderColor = 'transparent');
+      l.querySelector('img').style.borderColor = '#3b82f6';
+    });
+  });
+</script>
+{% endblock %}
