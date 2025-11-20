@@ -1,24 +1,43 @@
-<h2>Chat with {{ other_user.username }}</h2>
+{% extends "chat_base.html" %}
+{% block chat_area %}
+<div class="topbar">
+  <img src="{{ other_user.profile.get_avatar_url }}">
+  <div style="margin-left:10px"><b>{{ other_user.username }}</b><br><small style="color:var(--muted)">Online</small></div>
+</div>
 
-{% for msg in messages %}
-<div id="messages">{{msg.sender}}: {{msg.content}}</div>
-{% endfor %}
-<input id="messageInput" placeholder="Type..." autocomplete="off">
-<button onclick="sendMessage()">Send</button>
+<div class="messages" id="messages">
+  {% for msg in messages %}
+    <div class="msg {% if msg.sender == request.user %}right{% else %}left{% endif %}">
+      <strong>{{ msg.sender.username }}</strong>: {{ msg.content }}
+    </div>
+  {% endfor %}
+</div>
+
+<div class="composer">
+  <input id="msgBox" placeholder="Write Something..." autocomplete="off">
+  <button class="sendbtn" id="sendBtn">➤</button>
+</div>
 
 <script>
 const username = "{{ other_user.username }}";
-const ws = new WebSocket("ws://" + window.location.host + "/ws/chat/" + username + "/");
+const socket = new WebSocket(`ws://${window.location.host}/ws/chat/${username}/`);
 
-ws.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-    document.getElementById("messages").innerHTML += 
-        `<p><strong>${data.username}:</strong> ${data.message}</p>`;
+socket.onmessage = function(e){
+  const data = JSON.parse(e.data);
+  const messages = document.getElementById("messages");
+  const div = document.createElement("div");
+  div.className = data.sender === "{{ request.user.username }}" ? "msg right" : "msg left";
+  div.innerHTML = `<strong>${data.sender}</strong>: ${data.message}`;
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
 };
 
-function sendMessage() {
-    const msgInput = document.getElementById("messageInput");
-    ws.send(JSON.stringify({ message: msgInput.value }));
-    msgInput.value = "";
-}
+document.getElementById("sendBtn").onclick = ()=>{
+  const input = document.getElementById("msgBox");
+  if(input.value.trim()){
+    socket.send(JSON.stringify({message: input.value}));
+    input.value = '';
+  }
+};
 </script>
+{% endblock %}

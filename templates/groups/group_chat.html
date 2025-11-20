@@ -1,31 +1,43 @@
-<h1>{{ group.name }}</h1>
-<div id="chatBox">
-    {% for msg in messages %}
-        <div><strong>{{ msg.sender.username }}</strong>: {{ msg.content }}</div>
-    {% endfor %}
+{% extends "chat_base.html" %}
+{% block chat_area %}
+<div class="topbar">
+  <img src="">
+  <div style="margin-left:10px"><b>{{ group.name }}</b><br><small style="color:var(--muted)">Online</small></div>
 </div>
 
-<form id="chatForm">
-    <input type="text" id="msgInput" autocomplete="off">
-    <button type="submit">Send</button>
-</form>
+<div class="messages" id="messages">
+  {% for msg in messages %}
+    <div class="msg {% if msg.sender == request.user %}right{% else %}left{% endif %}">
+      <strong>{{ msg.sender.username }}</strong>: {{ msg.content }}
+    </div>
+  {% endfor %}
+</div>
+
+<div class="composer">
+  <input id="msgBox" placeholder="Write Something..." autocomplete="off">
+  <button class="sendbtn" id="sendBtn">➤</button>
+</div>
 
 <script>
 const slug = "{{ group.slug }}";
 const socket = new WebSocket(`ws://${window.location.host}/ws/groups/${slug}/`);
 
-socket.onmessage = function(e) {
-    const data = JSON.parse(e.data);
-    const chatBox = document.getElementById("chatBox");
-    const div = document.createElement("div");
-    div.innerHTML = `<strong>${data.username}</strong>: ${data.message}`;
-    chatBox.appendChild(div);
+socket.onmessage = function(e){
+  const data = JSON.parse(e.data);
+  const messages = document.getElementById("messages");
+  const div = document.createElement("div");
+  div.className = data.sender === "{{ request.user.username }}" ? "msg right" : "msg left";
+  div.innerHTML = `<strong>${data.sender}</strong>: ${data.message}`;
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
 };
 
-document.getElementById("chatForm").onsubmit = function(e){
-    e.preventDefault();
-    const input = document.getElementById("msgInput");
+document.getElementById("sendBtn").onclick = ()=>{
+  const input = document.getElementById("msgBox");
+  if(input.value.trim()){
     socket.send(JSON.stringify({message: input.value}));
     input.value = '';
+  }
 };
 </script>
+{% endblock %}

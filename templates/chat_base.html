@@ -1,0 +1,82 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Chat{% endblock %}</title>
+<style>
+:root{
+  --bg:#e9ecef; --panel:#fff; --muted:#9aa4af; --blue:#4aa3ff;
+  --bubble-right:#3a9bff; --bubble-left:#d7eaff;
+  font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+}
+body{margin:0;background:var(--bg);}
+.frame{display:flex;height:100vh;width:100vw;overflow:hidden;}
+.left{width:260px;background:var(--panel);border-right:1px solid #eef2f5;padding:18px;display:flex;flex-direction:column;}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.brand img{width:40px;height:40px;border-radius:8px;}
+.brand h3{margin:0;font-size:16px;}
+.search input{width:100%;padding:10px 12px;border-radius:22px;border:1px solid #e1e6ea;font-size:13px;}
+.contacts{margin-top:6px;overflow:auto;flex:1;}
+.contact{display:flex;align-items:center;gap:10px;padding:10px 4px;border-radius:8px;cursor:pointer;}
+.contact img{width:44px;height:44px;border-radius:50%;}
+.middle{flex:1;display:flex;flex-direction:column;background:linear-gradient(180deg,#fbfdff,#fff);}
+.topbar{height:70px;display:flex;align-items:center;padding:14px 18px;border-bottom:1px solid #eef2f5;}
+.topbar img{width:48px;height:48px;border-radius:50%;}
+.messages{flex:1;padding:20px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;}
+.msg{max-width:70%;padding:12px 16px;border-radius:14px;font-size:14px;word-break:break-word;}
+.msg.left{background:var(--bubble-left);align-self:flex-start;}
+.msg.right{background:var(--bubble-right);color:white;align-self:flex-end;}
+.composer{height:80px;padding:12px 18px;border-top:1px solid #eef2f5;display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,#fff,#f7fbff);}
+.composer input{flex:1;padding:12px 14px;border-radius:24px;border:1px solid #e1e6ea;}
+.sendbtn{background:var(--blue);color:#fff;border:none;padding:12px 14px;border-radius:50%;cursor:pointer;font-size:18px;}
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="left">
+    <div class="brand">
+      <img src="{% static 'avatars/defaults/default1.png' %}">
+      <h3>{{ request.user.username }}</h3>
+    </div>
+    <div class="search">
+      <input id="searchContact" placeholder="Search Users or Groups..." />
+    </div>
+    <div class="contacts" id="contactList">
+      <h5>Groups</h5>
+      
+      {% for g in groups %}
+        <div class="contact" onclick="window.location.href='{% url 'group:group_chat' g.slug %}'">
+          <img src="{% static 'avatars/defaults/default1.png' %}">
+          <div>{{ g.name }}</div>
+        </div>
+      {% endfor %}
+      <hr>
+      <h5>People</h5>
+      {% for u in random_people %}
+        <div class="contact" onclick="window.location.href='{% url 'group:direct_chat' u.username %}'">
+          <img src="{{ u.profile.get_avatar_url }}">
+          <div>{{ u.username }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="middle">
+    {% block chat_area %}{% endblock %}
+  </div>
+</div>
+
+<script>
+const searchInput = document.getElementById("searchContact");
+const contacts = document.querySelectorAll(".contact");
+searchInput.addEventListener("keyup", function() {
+  const value = this.value.toLowerCase().trim();
+  contacts.forEach(c => {
+    c.style.display = c.innerText.toLowerCase().includes(value) ? "flex" : "none";
+  });
+});
+</script>
+</body>
+</html>
