@@ -1,0 +1,319 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}MindWell AI{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <style>
+        :root {
+            --sidebar-width: 280px;
+            --primary-color: #6c5ce7;
+            --bg-light: #f8f9fa;
+        }
+        
+        body { 
+            background-color: #f0f2f5; 
+            height: 100vh; 
+            overflow: hidden; 
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: white;
+            border-right: 1px solid #dee2e6;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: margin-left 0.3s ease;
+        }
+
+        /* Add this inside the <style> tag in base.html */
+
+.alert-float {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999; /* high z-index to sit on top of everything */
+    min-width: 300px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+        /* Responsive Mobile Styles */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+            .mobile-toggle {
+                display: block !important;
+            }
+        }
+
+        .nav-link.active {
+            background-color: #eef2ff;
+            color: var(--primary-color);
+            font-weight: 600;
+            border-radius: 8px;
+        }
+
+        .avatar-circle {
+            width: 40px; 
+            height: 40px; 
+            border-radius: 50%; 
+            object-fit: cover;
+        }
+        
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="d-md-none bg-white p-3 border-bottom d-flex align-items-center justify-content-between mobile-toggle">
+    <button class="btn btn-light" onclick="toggleSidebar()"><i class="bi bi-list fs-4"></i></button>
+    <span class="fw-bold">MindWell AI</span>
+    <a href="{% url 'users:profile' request.user.username %}" class="text-decoration-none">
+        <img src="{{ request.user.profile.get_avatar_url }}" class="avatar-circle">
+    </a>
+</div>
+
+<nav class="sidebar p-3 d-flex flex-column" id="sidebar">
+    <div class="mb-3 px-2 d-flex align-items-center gap-2">
+        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width:40px;height:40px;">
+            <i class="bi bi-robot"></i>
+        </div>
+        <h4 class="m-0 fw-bold text-primary">MindWell</h4>
+    </div>
+
+    <div class="px-2 mb-3">
+        <input type="text" id="sidebarSearch" class="form-control bg-light border-0" placeholder="Search people or groups...">
+    </div>
+
+    <ul class="nav flex-column mb-2">
+        <li class="nav-item mb-1">
+            <a href="/chatbot/chat-template/" class="nav-link text-dark">
+                <i class="bi bi-stars me-2"></i> AI Assistant
+            </a>
+        </li>
+        <li class="nav-item mb-1">
+            <a href="{% url 'users:profile' request.user.username %}" class="nav-link text-dark">
+                <i class="bi bi-person-circle me-2"></i> My Profile
+            </a>
+        </li>
+    </ul>
+
+    <div id="searchResults" class="flex-grow-1 overflow-auto" style="display: none;">
+        <small class="text-muted px-2 fw-bold text-uppercase">Search Results</small>
+        <ul class="nav flex-column mt-2" id="resultsList">
+            </ul>
+    </div>
+
+    <div id="defaultSidebar" class="flex-grow-1 d-flex flex-column" style="overflow: hidden;">
+        <hr class="my-2">
+        
+        <div class="d-flex justify-content-between align-items-center mb-2 px-2">
+            <small class="text-muted fw-bold text-uppercase">Groups</small>
+            <a href="{% url 'group:group_create' %}" class="text-decoration-none small">+ New</a>
+        </div>
+        <div class="overflow-auto mb-2" style="max-height: 25vh;">
+            <ul class="nav flex-column">
+                {% for g in groups_sidebar %}
+                <li class="nav-item">
+                    <a href="{% url 'group:group_chat' g.slug %}" class="nav-link text-dark d-flex align-items-center gap-2">
+                        <span class="badge bg-light text-dark border">#</span> {{ g.name }}
+                    </a>
+                </li>
+                {% empty %}
+                <li class="px-2 text-muted small">No groups joined.</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <hr class="my-2">
+
+        <div class="mb-2 px-2">
+            <small class="text-muted fw-bold text-uppercase">Recent Chats</small>
+        </div>
+        <ul class="nav flex-column flex-grow-1 overflow-auto">
+            {% for u in recent_users %}
+            <li class="nav-item">
+                <a href="{% url 'group:direct_chat' u.username %}" class="nav-link text-dark d-flex align-items-center gap-2">
+                    <img src="{{ u.profile.get_avatar_url }}" class="avatar-circle" style="width: 30px; height: 30px;">
+                    <span>{{ u.username }}</span>
+                    {% if u.profile.is_online %}<span class="bg-success rounded-circle" style="width:8px;height:8px;"></span>{% endif %}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="mt-auto pt-3 border-top">
+        <a href="{% url 'users:logout' %}" class="btn btn-outline-danger w-100"><i class="bi bi-box-arrow-left"></i> Logout</a>
+    </div>
+</nav>
+<div class="main-content">
+    {% if messages %}
+    <div class="alert-float">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show bg-white border-start border-4 border-{{ message.tags }}" role="alert">
+                <strong>{{ message }}</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        setTimeout(function() {
+            let alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                let bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 4000); // Disappear after 4 seconds
+    </script>
+{% endif %}
+    
+    {% block content %}{% endblock %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // 1. Toggle Sidebar (Mobile)
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('active');
+    }
+
+    // 2. Search Logic
+    const searchInput = document.getElementById('sidebarSearch');
+    const defaultView = document.getElementById('defaultSidebar');
+    const resultsView = document.getElementById('searchResults');
+    const resultsList = document.getElementById('resultsList');
+    let searchTimeout = null;
+
+    searchInput.addEventListener('keyup', function() {
+        clearTimeout(searchTimeout);
+        const query = this.value.trim();
+
+        // If empty, show default view
+        if (query.length === 0) {
+            defaultView.style.display = 'flex';
+            resultsView.style.display = 'none';
+            return;
+        }
+
+        // Delay search by 300ms to avoid too many requests
+        searchTimeout = setTimeout(() => {
+            fetch(`/groups/search/?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Switch views
+                    defaultView.style.display = 'none';
+                    resultsView.style.display = 'block';
+                    resultsList.innerHTML = '';
+
+                    // No results found
+                    if (data.users.length === 0 && data.groups.length === 0) {
+                        resultsList.innerHTML = '<li class="px-2 text-muted small">No results found.</li>';
+                        return;
+                    }
+
+                    // Render Groups
+                    if (data.groups.length > 0) {
+                        resultsList.innerHTML += '<li class="px-2 text-muted small fw-bold mt-2">Groups</li>';
+                        data.groups.forEach(g => {
+                            resultsList.innerHTML += `
+                                <li class="nav-item">
+                                    <a href="/groups/${g.slug}/" class="nav-link text-dark d-flex align-items-center gap-2">
+                                        <span class="badge bg-info text-dark">Group</span> ${g.name}
+                                    </a>
+                                </li>`;
+                        });
+                    }
+
+                    // Render Users
+                    if (data.users.length > 0) {
+                        resultsList.innerHTML += '<li class="px-2 text-muted small fw-bold mt-2">People</li>';
+                        data.users.forEach(u => {
+                            resultsList.innerHTML += `
+                                <li class="nav-item">
+                                    <a href="/groups/chat/${u.username}/" class="nav-link text-dark d-flex align-items-center gap-2">
+                                        <img src="${u.avatar}" class="avatar-circle" style="width: 30px; height: 30px;">
+                                        <span>${u.username}</span>
+                                    </a>
+                                </li>`;
+                        });
+                    }
+                })
+                .catch(err => console.error(err));
+        }, 300);
+    });
+    {% if request.user.is_authenticated %}
+    const notifyScheme = window.location.protocol === "https:" ? "wss" : "ws";
+    const notifyUrl = `${notifyScheme}://${window.location.host}/ws/notifications/`;
+    const notifySocket = new WebSocket(notifyUrl);
+
+    notifySocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        
+        // Create the Alert HTML
+        const alertHtml = `
+            <div class="alert alert-info alert-dismissible fade show bg-white border-start border-4 border-info shadow" role="alert">
+                <strong>New message from ${data.sender}</strong><br>
+                ${data.message}
+                <br>
+                <a href="${data.link}" class="btn btn-sm btn-primary mt-2">Reply</a>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        `;
+
+        // Append to the existing alert-float container
+        // If container doesn't exist, create it
+        let container = document.querySelector('.alert-float');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'alert-float';
+            document.querySelector('.main-content').prepend(container);
+        }
+        
+        // Insert the new alert
+        container.insertAdjacentHTML('beforeend', alertHtml);
+        
+        // Play a sound (Optional)
+        // const audio = new Audio('/static/sounds/notification.mp3');
+        // audio.play().catch(e => console.log("Audio play failed"));
+    };
+    {% endif %}
+</script>
+</body>
+</html>

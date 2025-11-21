@@ -4,8 +4,9 @@ from . import views
 app_name = "group"
 
 urlpatterns = [
-    path("", views.group_list, name="group_list"),
+    path("", views.search, name="chat_search"),
 
+    path("search/", views.search, name="search"),
     # GROUPS
     path("create/", views.group_create, name="group_create"),
     path("<slug:slug>/join/", views.join_group, name="join_group"),
@@ -16,5 +17,4 @@ urlpatterns = [
     path("chat/<slug:username>/", views.direct_chat, name="direct_chat"),
 
     # SEARCH
-    path("search/", views.search, name="chat_search"),
 ]

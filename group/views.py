@@ -10,26 +10,38 @@ from django.http import JsonResponse
 @login_required
 def search(request):
     q = request.GET.get("q", "").strip()
-    users = []
-    groups = []
+    users_data = []
+    groups_data = []
+    print("q:",q)
+    
     if q:
-        users_qs = User.objects.filter(username__icontains=q)[:10]
+        # 'icontains' handles partial search (e.g., 'ra' finds 'Rahul' and 'Kiran')
+        users_qs = User.objects.filter(username__icontains=q).exclude(id=request.user.id)[:10]
         groups_qs = Group.objects.filter(name__icontains=q)[:10]
+        print("User:",users_qs)
     else:
         users_qs = User.objects.none()
         groups_qs = Group.objects.none()
 
     for u in users_qs:
-        users.append({
+        # SAFETY CHECK: Ensure profile exists to prevent crash
+        avatar_url = "/static/avatars/defaults/default1.png"
+        if hasattr(u, 'profile'):
+            # FIX IS HERE: Added () to call the method
+            avatar_url = u.profile.get_avatar_url() 
+
+        users_data.append({
             "username": u.username,
-            "avatar": u.profile.get_avatar_url,
+            "avatar": avatar_url,
         })
+            
     for g in groups_qs:
-        groups.append({
+        groups_data.append({
             "name": g.name,
             "slug": g.slug,
         })
-    return JsonResponse({"users": users, "groups": groups})
+
+    return JsonResponse({"users": users_data, "groups": groups_data})
 
 
 def sidebar_context(request):

@@ -1,60 +1,124 @@
-{% extends 'chat_base.html' %}
-{% block chat %}
-<div class="card">
-  <div class="card-header d-flex align-items-center gap-3">
-    <h5 class="mb-0">{{ group.name }}</h5>
-    <div class="ms-auto">
-      {% if is_member %}
-        <span class="text-success small">Member</span>
-      {% else %}
-        <a class="btn btn-sm btn-primary" href="{% url 'group:join_group' group.slug %}">Join</a>
-      {% endif %}
-    </div>
-  </div>
+{% extends 'base.html' %}
 
-  <div id="messages" style="height:60vh; overflow:auto; padding:18px;">
-    {% for m in messages %}
-      <div class="{% if m.sender == request.user %}text-end{% endif %} mb-2">
-        <div class="{% if m.sender == request.user %}msg-right{% else %}msg-left{% endif %}">
-          <strong>{{ m.sender.username }}</strong><br>
-          {{ m.content|linebreaksbr }}
+{% block content %}
+<style>
+    .chat-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #fff; }
+    .chat-header { padding: 15px; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: space-between; background: #fff; }
+    .messages-area { flex: 1; padding: 20px; overflow-y: auto; background-image: radial-gradient(#e5e7eb 1px, transparent 1px); background-size: 20px 20px; }
+    
+    .message-bubble { max-width: 75%; padding: 10px 15px; border-radius: 15px; margin-bottom: 10px; position: relative; font-size: 0.95rem; }
+    .msg-received { background: #f0f2f5; align-self: flex-start; border-bottom-left-radius: 2px; }
+    .msg-sent { background: #6c5ce7; color: white; align-self: flex-end; margin-left: auto; border-bottom-right-radius: 2px; }
+    
+    .chat-input-area { padding: 15px; background: white; border-top: 1px solid #eee; }
+    .sender-name { font-size: 0.75rem; margin-bottom: 4px; font-weight: 600; color: #555; }
+</style>
+
+<div class="chat-container">
+    <div class="chat-header shadow-sm">
+        <div class="d-flex align-items-center gap-3">
+            <div class="bg-light rounded-circle p-2 border">
+                <i class="bi bi-people-fill fs-5"></i>
+            </div>
+            <div>
+                <h5 class="m-0 fw-bold">{{ group.name }}</h5>
+                <small class="text-muted">{{ group.members.count }} members</small>
+            </div>
         </div>
-      </div>
-    {% endfor %}
-  </div>
-
-  {% if is_member %}
-  <div class="card-footer">
-    <div class="input-group">
-      <input id="msgInput" class="form-control" placeholder="Write a message...">
-      <button id="sendBtn" class="btn btn-primary">Send</button>
+        
+        {% if not is_member %}
+            <a href="{% url 'group:join_group' group.slug %}" class="btn btn-primary btn-sm">Join Group</a>
+        {% else %}
+            <div class="dropdown">
+                <button class="btn btn-light btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item text-danger" href="{% url 'group:leave_group' group.slug %}">Leave Group</a></li>
+                </ul>
+            </div>
+        {% endif %}
     </div>
-  </div>
-  {% endif %}
+
+    <div class="messages-area d-flex flex-column" id="chat-box">
+        {% for m in messages %}
+            <div class="message-bubble {% if m.sender == request.user %}msg-sent{% else %}msg-received{% endif %}">
+                {% if m.sender != request.user %}
+                    <div class="sender-name">{{ m.sender.username }}</div>
+                {% endif %}
+                {{ m.content|linebreaksbr }}
+                <div class="text-end opacity-75" style="font-size: 0.7rem; margin-top: 4px;">
+                    {{ m.timestamp|date:"H:i" }}
+                </div>
+            </div>
+        {% empty %}
+            <div class="text-center text-muted mt-5">
+                <i class="bi bi-chat-square-dots fs-1"></i>
+                <p>No messages yet. Start the conversation!</p>
+            </div>
+        {% endfor %}
+    </div>
+
+    {% if is_member %}
+    <div class="chat-input-area">
+        <div class="input-group">
+            <input type="text" id="msgInput" class="form-control border-0 bg-light" placeholder="Type a message..." style="padding: 12px;">
+            <button id="sendBtn" class="btn btn-primary px-4"><i class="bi bi-send-fill"></i></button>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <script>
-const slug = "{{ group.slug }}";
-const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
-const wsUrl = `${wsScheme}://${window.location.host}/ws/groups/${slug}/`;
-const socket = new WebSocket(wsUrl);
+    const slug = "{{ group.slug }}";
+    const currentUser = "{{ request.user.username }}";
+    // Determine protocol (ws or wss)
+    const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+    const wsUrl = `${wsScheme}://${window.location.host}/ws/groups/${slug}/`;
+    
+    const socket = new WebSocket(wsUrl);
+    const chatBox = document.getElementById("chat-box");
 
-const messagesDiv = document.getElementById("messages");
-socket.onmessage = (e) => {
-  const d = JSON.parse(e.data);
-  const div = document.createElement("div");
-  div.className = "mb-2";
-  div.innerHTML = `<div class="msg-left"><strong>${d.sender}</strong><br>${d.message}</div>`;
-  messagesDiv.appendChild(div);
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
-};
+    // Auto scroll to bottom
+    chatBox.scrollTop = chatBox.scrollHeight;
 
-document.getElementById("sendBtn").onclick = () => {
-  const input = document.getElementById("msgInput");
-  const v = input.value.trim();
-  if (!v) return;
-  socket.send(JSON.stringify({message: v}));
-  input.value = "";
-};
+    socket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        const isMe = data.sender === currentUser;
+        
+        const div = document.createElement("div");
+        div.className = `message-bubble ${isMe ? 'msg-sent' : 'msg-received'}`;
+        
+        let html = "";
+        if (!isMe) {
+            html += `<div class="sender-name">${data.sender}</div>`;
+        }
+        html += `${data.message.replace(/\n/g, '<br>')}`;
+        html += `<div class="text-end opacity-75" style="font-size: 0.7rem; margin-top: 4px;">Now</div>`;
+        
+        div.innerHTML = html;
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    };
+
+    socket.onclose = function(e) {
+        console.error('Chat socket closed unexpectedly');
+    };
+
+    const input = document.getElementById("msgInput");
+    const btn = document.getElementById("sendBtn");
+
+    if(btn) {
+        btn.onclick = sendMessage;
+        input.onkeyup = function(e) {
+            if (e.keyCode === 13) sendMessage();
+        };
+    }
+
+    function sendMessage() {
+        const message = input.value.trim();
+        if (message) {
+            socket.send(JSON.stringify({ 'message': message }));
+            input.value = '';
+        }
+    }
 </script>
 {% endblock %}
