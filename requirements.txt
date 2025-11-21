@@ -1,0 +1,11 @@
+Django>=5.0
+djangorestframework
+djangorestframework-simplejwt
+channels
+daphne
+python-decouple
+Pillow
+requests
+textblob
+django-cors-headers
+asgiref

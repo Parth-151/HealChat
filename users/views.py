@@ -3,21 +3,66 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
+from django.db.models import Q 
 from .models import Profile
 from .forms import ProfileUpdateForm
 from chatbot.models import AnalysisReport
-from group.models import Group
-import os, random
 
-# ---------------- Sidebar Context ---------------- #
+# --- IMPORTS FROM GROUP APP (Crucial for Sidebar) ---
+from group.models import Group, DirectMessage
+import os
+
+# ---------------- Sidebar Context Helper ---------------- #
 def sidebar_context(request):
+    """
+    Fetches Groups and Recent Chats for the Sidebar.
+    Used by Profile, Edit Profile, and Avatar pages.
+    """
     if not request.user.is_authenticated:
         return {}
-    all_users = User.objects.exclude(id=request.user.id)
-    random_people = random.sample(list(all_users), min(5, len(all_users))) if all_users else []
-    return {"random_people": random_people}
 
-# ---------------- Login / Logout / Signup ---------------- #
+    # 1. Fetch Groups (Logged-in user is a member)
+    groups_sidebar = Group.objects.filter(members=request.user).order_by("-created_at")
+
+    # 2. Fetch Recent Direct Chats
+    direct_msgs = DirectMessage.objects.filter(
+        Q(sender=request.user) | Q(receiver=request.user)
+    ).order_by("-timestamp").select_related('sender', 'receiver')
+
+    user_ids = []
+    for dm in direct_msgs:
+        if dm.sender_id != request.user.id:
+            user_ids.append(dm.sender_id)
+        if dm.receiver_id != request.user.id:
+            user_ids.append(dm.receiver_id)
+
+    # Filter unique users while preserving order (Most recent first)
+    seen = set()
+    recent_users = []
+    for uid in user_ids:
+        if uid not in seen and uid != request.user.id:
+            seen.add(uid)
+            try:
+                user = User.objects.get(id=uid)
+                # Ensure profile exists to prevent template crash
+                if not hasattr(user, 'profile'):
+                    Profile.objects.create(user=user)
+                recent_users.append(user)
+            except User.DoesNotExist:
+                continue
+            
+            if len(recent_users) >= 10: # Limit to 10
+                break
+    
+    # DEBUG: Print to terminal to verify it works
+    print(f"Sidebar Loaded for {request.user}: {len(groups_sidebar)} Groups, {len(recent_users)} Chats")
+
+    return {
+        "groups_sidebar": groups_sidebar, 
+        "recent_users": recent_users
+    }
+
+# ---------------- Auth Views ---------------- #
 def login_page(request):
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -26,10 +71,11 @@ def login_page(request):
         if user:
             login(request, user)
             messages.success(request, 'Login successful!')
-            return redirect('users:profile', username=user.username)
+            return redirect('group:chat_home') # Redirect to Chat Home
         messages.error(request, 'Invalid username or password.')
+    
     if request.user.is_authenticated:
-        return redirect('/chat/admin/')
+        return redirect('group:chat_home')
     return render(request, 'login.html')
 
 @login_required
@@ -53,21 +99,37 @@ def signup_view(request):
             messages.error(request, 'Email already in use.')
             return render(request, 'signup.html')
 
+        if User.objects.filter(username=username).exists():
+            messages.error(request, 'Username already taken.')
+            return render(request, 'signup.html')
+
         user = User.objects.create_user(username=username, email=email, password=password1)
         user.save()
-        messages.success(request, 'Signup successful!')
+        # Create Profile immediately
+        if not hasattr(user, 'profile'):
+            Profile.objects.create(user=user)
+            
+        messages.success(request, 'Signup successful! Please login.')
         return redirect('users:login')
+        
     if request.user.is_authenticated:
-        return redirect(f'/chat/{request.user.username}/')
+        return redirect('group:chat_home')
     return render(request, 'signup.html')
 
-# ---------------- Profile ---------------- #
+# ---------------- Profile Views ---------------- #
+
 @login_required
 def profile(request, username):
     user_obj = get_object_or_404(User, username=username)
+    
+    # Ensure profile exists
+    if not hasattr(user_obj, 'profile'):
+        Profile.objects.create(user=user_obj)
+        
     profile_obj = user_obj.profile
     is_owner = (request.user == user_obj)
 
+    # Analysis Report
     last_report = AnalysisReport.objects.filter(user=user_obj).order_by('-timestamp').first()
     short_analysis = None
     if last_report:
@@ -77,17 +139,22 @@ def profile(request, username):
             "negative": last_report.negative_percentage,
         }
 
+    # Groups for the Profile Card (NOT the sidebar)
     groups = Group.objects.filter(members=user_obj)
-    base_context = sidebar_context(request)
-
-    return render(request, "users/profile.html", {
+    
+    # --- KEY FIX: Get Sidebar Data ---
+    context = sidebar_context(request)
+    
+    # Merge data
+    context.update({
         "user_obj": user_obj,
         "profile": profile_obj,
         "is_owner": is_owner,
         "short_analysis": short_analysis,
-        "groups": groups,
-        **base_context
+        "groups": groups, 
     })
+
+    return render(request, "users/profile.html", context)
 
 @login_required
 def edit_profile(request):
@@ -100,21 +167,33 @@ def edit_profile(request):
             return redirect("users:profile", username=request.user.username)
     else:
         form = ProfileUpdateForm(instance=profile_obj)
-    return render(request, "users/edit_profile.html", {"form": form})
+    
+    # --- KEY FIX: Get Sidebar Data ---
+    context = sidebar_context(request)
+    context['form'] = form
+    
+    return render(request, "users/edit_profile.html", context)
 
 @login_required
 def choose_avatar(request):
     defaults_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "avatars", "defaults")
-    avatars = [f for f in os.listdir(defaults_dir) if f.lower().endswith((".png",".jpg",".jpeg",".webp"))]
+    try:
+        avatars = [f for f in os.listdir(defaults_dir) if f.lower().endswith((".png",".jpg",".jpeg",".webp"))]
+    except FileNotFoundError:
+        avatars = []
 
     if request.method == "POST":
         selected = request.POST.get("avatar")
         if selected in avatars:
             profile = request.user.profile
             profile.preset_avatar = selected
-            profile.avatar = None
+            profile.avatar = None 
             profile.save()
             messages.success(request, "Avatar updated successfully!")
             return redirect("users:profile", username=request.user.username)
 
-    return render(request, "users/choose_avatar.html", {"avatars": avatars})
+    # --- KEY FIX: Get Sidebar Data ---
+    context = sidebar_context(request)
+    context['avatars'] = avatars
+    
+    return render(request, "users/choose_avatar.html", context)

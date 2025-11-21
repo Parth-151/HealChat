@@ -142,22 +142,27 @@
     </div>
 
     <ul class="nav flex-column mb-2">
-        <li class="nav-item mb-1">
-            <a href="/" class="nav-link text-dark">
-                <i class="bi bi-house-door me-2"></i> Chat Home
-            </a>
-        </li>
-        <li class="nav-item mb-1">
-            <a href="/chatbot/chat-template/" class="nav-link text-dark">
-                <i class="bi bi-stars me-2"></i> AI Assistant
-            </a>
-        </li>
-        <li class="nav-item mb-1">
-            <a href="{% url 'users:profile' request.user.username %}" class="nav-link text-dark">
-                <i class="bi bi-person-circle me-2"></i> My Profile
-            </a>
-        </li>
-    </ul>
+    <li class="nav-item mb-1">
+        <a href="{% url 'home' %}" class="nav-link text-dark">
+            <i class="bi bi-house-door me-2"></i> Home
+        </a>
+    </li>
+    <li class="nav-item mb-1">
+        <a href="{% url 'chatbot:chat_page' %}" class="nav-link text-dark">
+            <i class="bi bi-stars me-2"></i> AI Assistant
+        </a>
+    </li>
+    <li class="nav-item mb-1">
+        <a href="{% url 'chatbot:analysis_page' %}" class="nav-link text-dark">
+            <i class="bi bi-graph-up-arrow me-2"></i> Analysis
+        </a>
+    </li>
+    <li class="nav-item mb-1">
+        <a href="{% url 'users:profile' request.user.username %}" class="nav-link text-dark">
+            <i class="bi bi-person-circle me-2"></i> My Profile
+        </a>
+    </li>
+</ul>
 
     <div id="searchResults" class="flex-grow-1 overflow-auto" style="display: none;">
         <small class="text-muted px-2 fw-bold text-uppercase" style="font-size: 0.7rem;">Search Results</small>

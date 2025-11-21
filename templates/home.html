@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mind Well - Home</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* ... [KEEP YOUR EXISTING CSS EXACTLY AS IT IS] ... */
+    /* I am not pasting the CSS here to save space, assume your CSS block is here */
+    :root{ --bg: #f6f4ef; --panel: #ffffff; --muted: #7d8a93; --accent1: #b6d3c8; --accent2: #9fb3e5; --text: #102029; --glass: rgba(255,255,255,0.6); }
+    /* ... paste the rest of your CSS here ... */
+    /* Ensure you keep your CSS */
+    body { font-family: 'Inter', sans-serif; margin:0; background: var(--bg); }
+    header { display: flex; justify-content: space-between; padding: 20px; align-items: center; }
+    .nav-btn { padding: 10px 20px; border-radius: 20px; border: none; cursor: pointer; font-weight: 600; text-decoration: none; color: #000; display: inline-block; }
+    .nav-items { display: flex; gap: 10px; }
+    .login { background: transparent; border: 1px solid #ccc; }
+    .signup { background: #fff; }
+    .about { background: linear-gradient(90deg,var(--accent1),var(--accent2)); }
+    .hero { padding: 50px; text-align: center; }
+  </style>
+</head>
+<body>
+  <header>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="logo" style="font-weight: bold; font-size: 1.2rem;">
+        🧠 Mind Well
+      </div>
+    </div>
+
+    <nav>
+      <div class="nav-items">
+        {% if user.is_authenticated %}
+            <a href="{% url 'users:profile' user.username %}" class="nav-btn about">My Profile</a>
+            <a href="{% url 'users:logout' %}" class="nav-btn login">Logout</a>
+        {% else %}
+            <a href="{% url 'users:signup' %}" class="nav-btn signup">Sign Up</a>
+            <a href="{% url 'users:login' %}" class="nav-btn login">Login</a>
+        {% endif %}
+      </div>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+        <h1 style="font-size: 3rem; margin-bottom: 20px;">YOUR JOURNEY TO WELLBEING BEGINS HERE</h1>
+        <p style="font-size: 1.2rem; color: #666; margin-bottom: 30px;">Find support, resources, and community for a healthier mind</p>
+        
+        <div style="display: flex; justify-content: center; gap: 15px;">
+            {% if user.is_authenticated %}
+                <a href="{% url 'chatbot:chat_page' %}" class="nav-btn about" style="padding: 15px 30px; font-size: 1.1rem;">Start Chatting</a>
+            {% else %}
+                <a href="{% url 'users:login' %}" class="nav-btn about" style="padding: 15px 30px; font-size: 1.1rem;">Get Started</a>
+            {% endif %}
+        </div>
+    </section>
+    </main>
+
+  <script>
+      // ... your existing scripts ...
+  </script>
+</body>
+</html>

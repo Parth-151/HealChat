@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="container p-4 h-100" style="overflow-y: auto;">
+    <h3 class="fw-bold mb-4">Mental Health Analysis</h3>
+    
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm p-3">
+                <h6 class="text-muted">Mood History</h6>
+                <canvas id="moodChart"></canvas>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm p-3">
+                <h6 class="text-muted">Stress Levels</h6>
+                <canvas id="stressChart"></canvas>
+            </div>
+        </div>
+        <div class="col-md-6 offset-md-3">
+            <div class="card border-0 shadow-sm p-3 text-center">
+                <h6 class="text-muted">Overall Well-being</h6>
+                <div style="max-width: 300px; margin: 0 auto;">
+                    <canvas id="circularChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mt-4 p-4">
+        <h5 class="fw-bold">Detailed Reports</h5>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Mood Score</th>
+                        <th>Stress Level</th>
+                        <th>Negativity</th>
+                        <th>Risk</th>
+                    </tr>
+                </thead>
+                <tbody id="reportTable">
+                    <tr><td colspan="5" class="text-center text-muted">Loading data...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Fetch Data
+    fetch("/api/chatbot/api/reports/")
+    .then(res => res.json())
+    .then(data => {
+        const tbody = document.getElementById("reportTable");
+        tbody.innerHTML = "";
+
+        if(data.length === 0) {
+            tbody.innerHTML = "<tr><td colspan='5' class='text-center'>No chat data to analyze yet.</td></tr>";
+            return;
+        }
+
+        let moods = [], stress = [], dates = [];
+
+        data.forEach(r => {
+            const dateStr = new Date(r.timestamp).toLocaleDateString();
+            moods.push(r.mood_score);
+            stress.push(r.stress_level);
+            dates.push(dateStr);
+
+            tbody.innerHTML += `
+                <tr>
+                    <td>${new Date(r.timestamp).toLocaleString()}</td>
+                    <td>${r.mood_score}</td>
+                    <td>${r.stress_level}</td>
+                    <td>${r.negative_percentage}%</td>
+                    <td>${r.risk_level}</td>
+                </tr>
+            `;
+        });
+
+        // Charts
+        new Chart(document.getElementById("moodChart"), {
+            type: "line",
+            data: { 
+                labels: dates, 
+                datasets: [{ label: "Mood", data: moods, borderColor: "#3b82f6", tension: 0.3 }] 
+            }
+        });
+
+        new Chart(document.getElementById("stressChart"), {
+            type: "line",
+            data: { 
+                labels: dates, 
+                datasets: [{ label: "Stress", data: stress, borderColor: "#ef4444", tension: 0.3 }] 
+            }
+        });
+
+        // Averages
+        const avgMood = Math.round(moods.reduce((a,b)=>a+b,0) / moods.length);
+        const avgStress = Math.round(stress.reduce((a,b)=>a+b,0) / stress.length);
+
+        new Chart(document.getElementById("circularChart"), {
+            type: "doughnut",
+            data: {
+                labels: ["Mood", "Stress"],
+                datasets: [{ 
+                    data: [avgMood, avgStress],
+                    backgroundColor: ["#3b82f6", "#ef4444"]
+                }]
+            }
+        });
+    });
+</script>
+{% endblock %}
