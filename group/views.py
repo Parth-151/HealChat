@@ -1,33 +1,31 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Group, GroupMessage, DirectMessage
-from .forms import CreateGroupForm
+# Ensure you import both forms
+from .forms import CreateGroupForm, GroupUpdateForm 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
 from django.db.models import Q
-
 from django.http import JsonResponse
+
+User = get_user_model() # Define User globally for all views
 
 @login_required
 def search(request):
     q = request.GET.get("q", "").strip()
     users_data = []
     groups_data = []
-    print("q:",q)
     
     if q:
-        # 'icontains' handles partial search (e.g., 'ra' finds 'Rahul' and 'Kiran')
         users_qs = User.objects.filter(username__icontains=q).exclude(id=request.user.id)[:10]
         groups_qs = Group.objects.filter(name__icontains=q)[:10]
-        print("User:",users_qs)
     else:
         users_qs = User.objects.none()
         groups_qs = Group.objects.none()
 
     for u in users_qs:
-        # SAFETY CHECK: Ensure profile exists to prevent crash
         avatar_url = "/static/avatars/defaults/default1.png"
+        # Safety check
         if hasattr(u, 'profile'):
-            # FIX IS HERE: Added () to call the method
             avatar_url = u.profile.get_avatar_url() 
 
         users_data.append({
@@ -47,9 +45,11 @@ def search(request):
 def sidebar_context(request):
     if not request.user.is_authenticated:
         return {}
-    # groups user belongs
+    
+    # 1. Groups
     groups_sidebar = Group.objects.filter(members=request.user).order_by("-created_at")
-    # recent direct chat users
+    
+    # 2. Recent Direct Chats
     direct_msgs = DirectMessage.objects.filter(Q(sender=request.user) | Q(receiver=request.user)).order_by("-timestamp")
     user_ids = []
     for dm in direct_msgs:
@@ -57,7 +57,7 @@ def sidebar_context(request):
             user_ids.append(dm.sender_id)
         if dm.receiver_id != request.user.id:
             user_ids.append(dm.receiver_id)
-    # unique and preserve order
+            
     seen = set()
     recent_users = []
     for uid in user_ids:
@@ -70,19 +70,27 @@ def sidebar_context(request):
     return {"groups_sidebar": groups_sidebar, "recent_users": recent_users}
 
 
+# In group/views.py
+
+@login_required
+def chat_home(request):
+    # Re-use the sidebar context so the sidebar appears
+    context = sidebar_context(request)
+    return render(request, "groups/chat_home.html", context)
+
 @login_required
 def group_list(request):
     context = sidebar_context(request)
     return render(request, "groups/group_list.html", context)
 
 
-
 @login_required
 def group_create(request):
-    groups, recent_users = sidebar_context(request)
+    # Use context for sidebar
+    context = sidebar_context(request)
 
     if request.method == "POST":
-        form = CreateGroupForm(request.POST)
+        form = CreateGroupForm(request.POST, request.FILES) # Added request.FILES for icon
         if form.is_valid():
             grp = form.save(commit=False)
             grp.created_by = request.user
@@ -92,14 +100,13 @@ def group_create(request):
     else:
         form = CreateGroupForm()
 
-    return render(request, "groups/group_create.html", {
-        "form": form,
-        "groups": groups,
-        "recent_users": recent_users
-    })
+    # Merge form into context
+    context['form'] = form
+    return render(request, "groups/group_create.html", context)
+
+
 @login_required
 def group_chat(request, slug):
-
     group = get_object_or_404(Group, slug=slug)
     is_member = group.members.filter(id=request.user.id).exists()
 
@@ -109,12 +116,13 @@ def group_chat(request, slug):
             GroupMessage.objects.create(group=group, sender=request.user, content=content)
             return redirect('group:group_chat', slug=slug)
 
-    messages = group.messages.select_related('sender').all()[:200]
+    # FIX 1: RENAME 'messages' to 'chat_messages'
+    chat_messages = group.messages.select_related('sender').all()[:200]
 
     context = sidebar_context(request)
     context.update({
         "group": group,
-        "messages": messages,
+        "chat_messages": chat_messages, # Use new name here
         "is_member": is_member
     })
 
@@ -127,39 +135,58 @@ def join_group(request, slug):
     group.members.add(request.user)
     return redirect('group:group_chat', slug=group.slug)
 
+
 @login_required
 def leave_group(request, slug):
     group = get_object_or_404(Group, slug=slug)
     group.members.remove(request.user)
     return redirect('group:group_list')
 
-User = get_user_model()
+
 @login_required
 def direct_chat(request, username):
-    from django.contrib.auth.models import User
-    from .models import Group, DirectMessage
-
     other_user = get_object_or_404(User, username=username)
 
-    # Fetch chat messages
-    messages = DirectMessage.objects.filter(
+    # FIX 1: RENAME 'messages' to 'chat_messages'
+    chat_messages = DirectMessage.objects.filter(
         Q(sender=request.user, receiver=other_user) |
         Q(sender=other_user, receiver=request.user)
     ).order_by("timestamp")
 
-    # Sidebar context (IMPORTANT)
-    groups_sidebar = Group.objects.filter(members=request.user)
-
-    # Recent direct chat users
-    recent_users = User.objects.filter(
-        Q(sent_messages__receiver=request.user) |
-        Q(received_messages__sender=request.user)
-    ).exclude(id=request.user.id).distinct()
-
-    return render(request, "chat/direct_chat.html", {
+    # FIX 3: USE HELPER FUNCTION (Don't repeat logic)
+    context = sidebar_context(request)
+    
+    context.update({
         "other_user": other_user,
-        "messages": messages,
-        "groups_sidebar": groups_sidebar,
-        "recent_users": recent_users,
+        "chat_messages": chat_messages, # Use new name
     })
 
+    return render(request, "chat/direct_chat.html", context)
+
+
+@login_required
+def group_profile(request, slug):
+    group = get_object_or_404(Group, slug=slug)
+    is_member = group.members.filter(id=request.user.id).exists()
+    is_admin = (request.user == group.created_by)
+    
+    # Get Sidebar Data
+    context = sidebar_context(request)
+
+    if request.method == "POST" and is_admin:
+        form = GroupUpdateForm(request.POST, request.FILES, instance=group)
+        if form.is_valid():
+            form.save()
+            return redirect("group:group_profile", slug=group.slug)
+    else:
+        form = GroupUpdateForm(instance=group) if is_admin else None
+
+    # FIX 2: MERGE DATA properly (don't nest it inside "context")
+    context.update({
+        "group": group,
+        "is_member": is_member,
+        "is_admin": is_admin,
+        "form": form
+    })
+
+    return render(request, "groups/group_profile.html", context)

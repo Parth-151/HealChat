@@ -9,12 +9,19 @@ class Group(models.Model):
     name = models.CharField(max_length=150, unique=True)
     slug = models.SlugField(max_length=160, unique=True)
     description = models.TextField(blank=True)
+    icon = models.ImageField(upload_to='group_icons/', blank=True, null=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="created_groups")
     members = models.ManyToManyField(User, related_name="groups_joined", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.name
+    
+    def get_icon_url(self):
+        if self.icon:
+            return self.icon.url
+        # Return a default placeholder if no icon
+        return "/static/images/group_default.png"
 
 
 

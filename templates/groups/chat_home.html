@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex flex-column align-items-center justify-content-center h-100 text-center p-5" style="background-color: #f8f9fa;">
+    <div class="bg-white p-5 rounded-circle shadow-sm mb-4" style="width: 150px; height: 150px; display: flex; align-items: center; justify-content: center;">
+        <i class="bi bi-chat-square-heart text-primary" style="font-size: 4rem;"></i>
+    </div>
+    <h2 class="fw-bold text-dark">Welcome to MindWell Chat</h2>
+    <p class="text-muted lead mb-4">Select a group or a friend from the sidebar to start messaging.</p>
+    
+    <div class="d-flex gap-3">
+        <a href="{% url 'group:group_create' %}" class="btn btn-outline-primary">
+            <i class="bi bi-plus-circle"></i> Create Group
+        </a>
+        <button onclick="document.getElementById('sidebarSearch').focus()" class="btn btn-primary">
+            <i class="bi bi-search"></i> Find People
+        </button>
+    </div>
+</div>
+{% endblock %}

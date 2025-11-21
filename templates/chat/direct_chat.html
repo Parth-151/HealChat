@@ -2,7 +2,6 @@
 
 {% block content %}
 <style>
-    /* Same styles as group chat for consistency */
     .chat-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #fff; }
     .chat-header { padding: 15px; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: space-between; background: #fff; }
     .messages-area { flex: 1; padding: 20px; overflow-y: auto; background-image: radial-gradient(#e5e7eb 1px, transparent 1px); background-size: 20px 20px; }
@@ -17,17 +16,17 @@
 
 <div class="chat-container">
     <div class="chat-header shadow-sm">
-        <div class="d-flex align-items-center gap-3">
+        <a href="{% url 'users:profile' other_user.username %}" class="d-flex align-items-center gap-3 text-decoration-none text-dark">
             <img src="{{ other_user.profile.get_avatar_url }}" class="avatar-circle">
             <div>
                 <h5 class="m-0 fw-bold">{{ other_user.username }}</h5>
                 <small class="text-muted">Direct Message</small>
             </div>
-        </div>
+        </a>
     </div>
 
     <div class="messages-area d-flex flex-column" id="chat-box">
-        {% for m in messages %}
+        {% for m in chat_messages %}
             <div class="message-bubble {% if m.sender == request.user %}msg-sent{% else %}msg-received{% endif %}">
                 {{ m.content|linebreaksbr }}
                 <div class="text-end opacity-75" style="font-size: 0.7rem; margin-top: 4px;">

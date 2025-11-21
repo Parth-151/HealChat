@@ -17,32 +17,25 @@
 <div class="chat-container">
     <div class="chat-header shadow-sm">
         <div class="d-flex align-items-center gap-3">
-            <div class="bg-light rounded-circle p-2 border">
-                <i class="bi bi-people-fill fs-5"></i>
-            </div>
-            <div>
-                <h5 class="m-0 fw-bold">{{ group.name }}</h5>
-                <small class="text-muted">{{ group.members.count }} members</small>
-            </div>
+            <a href="{% url 'group:group_profile' group.slug %}" class="d-flex align-items-center gap-3 text-decoration-none text-dark">
+                <div class="rounded-circle p-1 border">
+                    <img src="{{ group.get_icon_url }}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                </div>
+                <div>
+                    <h5 class="m-0 fw-bold">{{ group.name }}</h5>
+                    <small class="text-muted">{{ group.members.count }} members</small>
+                </div>
+            </a>
         </div>
-        
-        {% if not is_member %}
-            <a href="{% url 'group:join_group' group.slug %}" class="btn btn-primary btn-sm">Join Group</a>
-        {% else %}
-            <div class="dropdown">
-                <button class="btn btn-light btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item text-danger" href="{% url 'group:leave_group' group.slug %}">Leave Group</a></li>
-                </ul>
-            </div>
-        {% endif %}
     </div>
 
     <div class="messages-area d-flex flex-column" id="chat-box">
-        {% for m in messages %}
+        {% for m in chat_messages %}
             <div class="message-bubble {% if m.sender == request.user %}msg-sent{% else %}msg-received{% endif %}">
                 {% if m.sender != request.user %}
-                    <div class="sender-name">{{ m.sender.username }}</div>
+                    <a href="{% url 'users:profile' m.sender.username %}" class="sender-name text-decoration-none">
+                        {{ m.sender.username }}
+                    </a>
                 {% endif %}
                 {{ m.content|linebreaksbr }}
                 <div class="text-end opacity-75" style="font-size: 0.7rem; margin-top: 4px;">
@@ -70,7 +63,6 @@
 <script>
     const slug = "{{ group.slug }}";
     const currentUser = "{{ request.user.username }}";
-    // Determine protocol (ws or wss)
     const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
     const wsUrl = `${wsScheme}://${window.location.host}/ws/groups/${slug}/`;
     
@@ -97,10 +89,6 @@
         div.innerHTML = html;
         chatBox.appendChild(div);
         chatBox.scrollTop = chatBox.scrollHeight;
-    };
-
-    socket.onclose = function(e) {
-        console.error('Chat socket closed unexpectedly');
     };
 
     const input = document.getElementById("msgInput");

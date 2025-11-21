@@ -1,6 +1,94 @@
-<h1>Create Group</h1>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Create</button>
-</form>
+{% extends 'base.html' %}
+
+{% block title %}Create Group | MindWell{% endblock %}
+
+{% block content %}
+<div class="container p-4 h-100" style="overflow-y: auto;">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            
+            <div class="card border-0 shadow-lg rounded-4 mt-3">
+                <div class="card-body p-5">
+                    
+                    <div class="text-center mb-4">
+                        <div class="bg-primary-subtle text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 70px; height: 70px;">
+                            <i class="bi bi-people-fill fs-2"></i>
+                        </div>
+                        <h2 class="fw-bold text-dark">Create Community</h2>
+                        <p class="text-muted">Create a safe space to chat and connect.</p>
+                    </div>
+
+                    <form method="POST" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Group Name</label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <div class="text-danger small mt-1">{{ form.name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                Unique ID (Slug) 
+                                <i class="bi bi-info-circle text-muted" data-bs-toggle="tooltip" title="This appears in the URL"></i>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted">/groups/</span>
+                                {{ form.slug }}
+                            </div>
+                            {% if form.slug.errors %}
+                                <div class="text-danger small mt-1">{{ form.slug.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">Auto-generated from name. Must be unique.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Group Icon</label>
+                            {{ form.icon }}
+                            {% if form.icon.errors %}
+                                <div class="text-danger small mt-1">{{ form.icon.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Description</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="text-danger small mt-1">{{ form.description.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-check-circle-fill me-2"></i> Create Group
+                            </button>
+                            <a href="/" class="btn btn-light text-muted">Cancel</a>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    // This script listens to the "Name" field and automatically
+    // creates a URL-friendly "Slug" (e.g., "My Group" -> "my-group")
+    
+    const nameInput = document.getElementById('id_name'); // Django default ID
+    const slugInput = document.getElementById('id_slug'); // Django default ID
+
+    if(nameInput && slugInput) {
+        nameInput.addEventListener('keyup', function() {
+            let val = this.value.toLowerCase();
+            // Replace spaces with dashes and remove non-alphanumeric chars
+            val = val.replace(/\s+/g, '-').replace(/[^\w\-]+/g, '');
+            slugInput.value = val;
+        });
+    }
+</script>
+{% endblock %}
