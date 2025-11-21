@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f2f2f2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .chat-container {
+            width: 400px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 10px;
+            max-width: 80%;
+            line-height: 1.4em;
+        }
+
+        .user {
+            background: #d1e7ff;
+            align-self: flex-end;
+        }
+
+        .bot {
+            background: #e8e8e8;
+            align-self: flex-start;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 5px;
+            padding: 10px;
+            border-top: 1px solid #ddd;
+        }
+
+        .input-area input {
+            flex: 1;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        .input-area button {
+            padding: 10px 12px;
+            border: none;
+            background: #007bff;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .lang-select {
+            display: flex;
+            justify-content: center;
+            padding: 8px;
+            gap: 10px;
+        }
+
+        .lang-select button {
+            padding: 6px 10px;
+            border: none;
+            background: #444;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .speech-btn {
+            background: #ff5722 !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+
+    <div class="lang-select">
+        <button onclick="setLang('en')">English</button>
+        <button onclick="setLang('gu')">Gujarati</button>
+        <button onclick="setLang('hi')">Hindi</button>
+    </div>
+
+    <div class="messages" id="messages"></div>
+
+    <div class="input-area">
+        <button class="speech-btn" id="micBtn" onclick="toggleSpeech()">🎤 Start</button>
+        <input type="text" id="userInput" placeholder="Type or speak..." />
+        <button onclick="sendMessage()">Send</button>
+    </div>
+</div>
+
+<script>
+    const messagesDiv = document.getElementById("messages");
+    const userInput = document.getElementById("userInput");
+    const micBtn = document.getElementById("micBtn");
+
+    let selectedLang = "en-IN";
+    let recognition = null;
+    let listening = false;
+
+    function setLang(lang) {
+        if (lang === "gu") selectedLang = "gu-IN";
+        else if (lang === "hi") selectedLang = "hi-IN";
+        else selectedLang = "en-IN";
+    }
+
+    function sendMessage() {
+        let text = userInput.value.trim();
+        if (!text) return;
+
+        showMessage(text, "user");
+        userInput.value = "";
+
+        setTimeout(() => {
+            showMessage("Bot reply for: " + text, "bot");
+        }, 400);
+    }
+
+    function showMessage(msg, type) {
+        const div = document.createElement("div");
+        div.className = `message ${type}`;
+        div.innerText = msg;
+        messagesDiv.appendChild(div);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    // Toggle Start & Stop Speech
+    function toggleSpeech() {
+        if (!listening) {
+            startSpeech();
+        } else {
+            stopSpeech();
+        }
+    }
+
+    // Start Speech Recognition
+    function startSpeech() {
+        if (!('webkitSpeechRecognition' in window)) {
+            alert("Speech recognition not supported");
+            return;
+        }
+
+        recognition = new webkitSpeechRecognition();
+        recognition.lang = selectedLang;
+        recognition.interimResults = false;
+        recognition.continuous = false;
+
+        recognition.onstart = () => {
+            listening = true;
+            micBtn.textContent = "🛑 Stop";
+            micBtn.style.background = "#d32f2f";
+        };
+
+        recognition.onresult = (event) => {
+            const spoken = event.results[0][0].transcript;
+            userInput.value = spoken;
+        };
+
+        recognition.onend = () => {
+            stopSpeech();
+        };
+
+        recognition.start();
+    }
+
+    // Stop Speech Recognition
+    function stopSpeech() {
+        listening = false;
+        if (recognition) recognition.stop();
+
+        micBtn.textContent = "🎤 Start";
+        micBtn.style.background = "#ff5722";
+    }
+
+    // ENTER KEY SEND
+    userInput.addEventListener("keypress", function (e) {
+        if (e.key === "Enter") sendMessage();
+    });
+</script>
+
+</body>
+</html>

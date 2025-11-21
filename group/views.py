@@ -140,7 +140,7 @@ def join_group(request, slug):
 def leave_group(request, slug):
     group = get_object_or_404(Group, slug=slug)
     group.members.remove(request.user)
-    return redirect('group:group_list')
+    return redirect('group:chat_home')
 
 
 @login_required

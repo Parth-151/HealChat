@@ -48,50 +48,55 @@
         </div>
     </div>
 </div>
-
 <script>
-const other = "{{ other_user.username }}";
-const currentUser = "{{ request.user.username }}";
-const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
-const url = `${wsScheme}://${window.location.host}/ws/direct/${other}/`;
-const sock = new WebSocket(url);
-const chatBox = document.getElementById("chat-box");
+    const other = "{{ other_user.username }}";
+    const currentUser = "{{ request.user.username }}";
+    const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+    const url = `${wsScheme}://${window.location.host}/ws/direct/${other}/`;
+    const sock = new WebSocket(url);
+    const chatBox = document.getElementById("chat-box");
 
-// Scroll to bottom on load
-chatBox.scrollTop = chatBox.scrollHeight;
-
-sock.onmessage = (ev) => {
-    const d = JSON.parse(ev.data);
-    const isMe = d.sender === currentUser;
-    
-    const div = document.createElement("div");
-    div.className = `message-bubble ${isMe ? 'msg-sent' : 'msg-received'}`;
-    
-    let html = "";
-    html += `${d.message.replace(/\n/g, '<br>')}`;
-    html += `<div class="text-end opacity-75" style="font-size: 0.7rem; margin-top: 4px;">Now</div>`;
-
-    div.innerHTML = html;
-    chatBox.appendChild(div);
+    // Scroll to bottom on load
     chatBox.scrollTop = chatBox.scrollHeight;
-};
 
-const input = document.getElementById("msgInput");
-const btn = document.getElementById("sendBtn");
+    sock.onmessage = (ev) => {
+        const d = JSON.parse(ev.data); // Variable is 'd' here
+        const isMe = d.sender === currentUser;
+        
+        const div = document.createElement("div");
+        div.className = `message-bubble ${isMe ? 'msg-sent' : 'msg-received'}`;
+        
+        // --- TIME FIX START ---
+        // Use 'd.timestamp', fallback to current time if missing
+        const date = new Date(d.timestamp || Date.now());
+        const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        // --- TIME FIX END ---
 
-if(btn){
-    btn.onclick = sendMessage;
-    input.onkeyup = function(e) {
-        if (e.keyCode === 13) sendMessage();
+        let html = "";
+        html += `${d.message.replace(/\n/g, '<br>')}`;
+        html += `<div class="text-end opacity-75" style="font-size: 0.7rem; margin-top: 4px;">${timeStr}</div>`;
+
+        div.innerHTML = html;
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
     };
-}
 
-function sendMessage() {
-    const v = input.value.trim();
-    if (v) {
-        sock.send(JSON.stringify({message: v}));
-        input.value = "";
+    const input = document.getElementById("msgInput");
+    const btn = document.getElementById("sendBtn");
+
+    if(btn){
+        btn.onclick = sendMessage;
+        input.onkeyup = function(e) {
+            if (e.keyCode === 13) sendMessage();
+        };
     }
-}
+
+    function sendMessage() {
+        const v = input.value.trim();
+        if (v) {
+            sock.send(JSON.stringify({message: v}));
+            input.value = "";
+        }
+    }
 </script>
 {% endblock %}

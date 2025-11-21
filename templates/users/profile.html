@@ -4,7 +4,8 @@
 {% block title %}{{ user_obj.username }} | Profile{% endblock %}
 
 {% block content %}
-<div class="container-fluid p-4" style="overflow-y: auto; height: 100%;">
+<div class="container-fluid px-4 pb-4 pt-5 pt-lg-4">
+    
     <div class="card shadow-sm p-4 mb-4">
         <div class="d-flex flex-column flex-md-row align-items-center gap-4">
 
@@ -18,7 +19,7 @@
                 {% endif %}
             </div>
 
-            <div class="flex-grow-1 w-100">
+            <div class="flex-grow-1 w-100 text-center text-md-start">
                 <h3 class="fw-bold mb-1">{{ user_obj.get_full_name|default:user_obj.username }}</h3>
                 <p class="text-muted mb-2">{{ user_obj.email }}</p>
                 <p class="mb-3">{{ profile.bio|default:"No bio added yet." }}</p>
@@ -46,11 +47,11 @@
                         <li>Stress: <strong>{{ short_analysis.stress }}</strong></li>
                         <li>Negative: <strong>{{ short_analysis.negative }}%</strong></li>
                     </ul>
-                    <a href="/chatbot/analysis/" class="btn btn-outline-primary btn-sm">View full analysis</a>
+                    <a href="{% url 'chatbot:analysis_page' %}" class="btn btn-outline-primary btn-sm">View full analysis</a>
                 {% else %}
                     <p class="text-muted">No analysis available.</p>
                     {% if is_owner %}
-                        <a href="/chatbot/chat-template/" class="btn btn-sm btn-outline-primary">Chat with AI</a>
+                        <a href="{% url 'chatbot:chat_page' %}" class="btn btn-sm btn-outline-primary">Chat with AI</a>
                     {% endif %}
                 {% endif %}
             </div>
@@ -63,9 +64,14 @@
                 {% if groups %}
                     <ul class="list-group list-group-flush">
                         {% for g in groups %}
-                            <li class="list-group-item">
+                            <li class="list-group-item px-0">
                                 <a href="{% url 'group:group_chat' g.slug %}" class="text-decoration-none d-flex align-items-center gap-2">
-                                    <i class="bi bi-hash"></i> {{ g.name }}
+                                    {% if g.icon %}
+                                        <img src="{{ g.get_icon_url }}" class="rounded-circle border" style="width: 32px; height: 32px; object-fit: cover;">
+                                    {% else %}
+                                        <div class="bg-light text-dark border rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; font-weight: bold;">#</div>
+                                    {% endif %}
+                                    <span class="text-dark fw-medium">{{ g.name }}</span>
                                 </a>
                             </li>
                         {% endfor %}

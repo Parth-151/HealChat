@@ -59,7 +59,6 @@
     </div>
     {% endif %}
 </div>
-
 <script>
     const slug = "{{ group.slug }}";
     const currentUser = "{{ request.user.username }}";
@@ -73,18 +72,24 @@
     chatBox.scrollTop = chatBox.scrollHeight;
 
     socket.onmessage = function(e) {
-        const data = JSON.parse(e.data);
+        const data = JSON.parse(e.data); // Variable is 'data' here
         const isMe = data.sender === currentUser;
         
         const div = document.createElement("div");
         div.className = `message-bubble ${isMe ? 'msg-sent' : 'msg-received'}`;
+        
+        // --- TIME FIX START ---
+        // Use 'data.timestamp', fallback to current time if missing
+        const date = new Date(data.timestamp || Date.now());
+        const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        // --- TIME FIX END ---
         
         let html = "";
         if (!isMe) {
             html += `<div class="sender-name">${data.sender}</div>`;
         }
         html += `${data.message.replace(/\n/g, '<br>')}`;
-        html += `<div class="text-end opacity-75" style="font-size: 0.7rem; margin-top: 4px;">Now</div>`;
+        html += `<div class="text-end opacity-75" style="font-size: 0.7rem; margin-top: 4px;">${timeStr}</div>`;
         
         div.innerHTML = html;
         chatBox.appendChild(div);

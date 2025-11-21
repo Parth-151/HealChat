@@ -12,23 +12,19 @@
     <style>
         /* --- GLOBAL FIXES --- */
         :root {
-            --sidebar-width: 260px; /* Slightly smaller for better fit */
+            --sidebar-width: 280px; /* Increased slightly for breathing room */
             --primary-color: #6c5ce7;
             --bg-light: #f8f9fa;
         }
         
-        /* This fixes the "Zoom" issue: Padding is included in width */
-        *, *::before, *::after {
-            box-sizing: border-box;
-        }
+        *, *::before, *::after { box-sizing: border-box; }
 
         body { 
             background-color: #f0f2f5; 
             height: 100vh; 
             width: 100vw;
-            overflow: hidden; /* Prevents double scrollbars */
-            margin: 0;
-            padding: 0;
+            overflow: hidden;
+            margin: 0; padding: 0;
         }
 
         /* --- SIDEBAR --- */
@@ -36,51 +32,45 @@
             width: var(--sidebar-width);
             height: 100vh;
             position: fixed;
-            top: 0;
-            left: 0;
+            top: 0; left: 0;
             background: white;
             border-right: 1px solid #dee2e6;
-            overflow-y: auto;
+            display: flex;           /* Flexbox for layout */
+            flex-direction: column;  /* Stack vertical */
             transition: transform 0.3s ease;
-            z-index: 1050; /* Above content */
+            z-index: 1050;
         }
+
+        /* The Scrollable Middle Section */
+        .sidebar-scroll-area {
+            flex-grow: 1;            /* Take all available remaining height */
+            overflow-y: auto;        /* Enable scrolling here */
+            overflow-x: hidden;
+            padding-bottom: 20px;    /* Space before footer */
+        }
+        
+        /* Custom Scrollbar for sidebar */
+        .sidebar-scroll-area::-webkit-scrollbar { width: 5px; }
+        .sidebar-scroll-area::-webkit-scrollbar-thumb { background: #e9ecef; border-radius: 4px; }
 
         /* --- MAIN CONTENT --- */
         .main-content {
-            /* This calculates the remaining space exactly */
             position: absolute;
-            top: 0;
-            right: 0;
-            bottom: 0;
-            left: var(--sidebar-width); /* Start after sidebar */
-            
-            overflow-y: auto; /* Only the content scrolls, not the whole page */
+            top: 0; right: 0; bottom: 0;
+            left: var(--sidebar-width);
+            overflow-y: auto;
             overflow-x: hidden;
-            
             display: flex;
             flex-direction: column;
             transition: left 0.3s ease;
         }
 
-        /* --- RESPONSIVE (Mobile/Tablets) --- */
-        /* Applied when screen is smaller than 992px (Laptops/Tablets) */
+        /* --- RESPONSIVE --- */
         @media (max-width: 992px) {
-            .sidebar {
-                transform: translateX(-100%); /* Hide sidebar by default */
-            }
-            .sidebar.active {
-                transform: translateX(0); /* Show when active */
-                box-shadow: 5px 0 15px rgba(0,0,0,0.1);
-            }
-            
-            .main-content {
-                left: 0; /* Content takes full width */
-                width: 100%;
-            }
-            
-            .mobile-toggle {
-                display: flex !important; /* Show hamburger menu */
-            }
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.active { transform: translateX(0); box-shadow: 5px 0 15px rgba(0,0,0,0.1); }
+            .main-content { left: 0; width: 100%; }
+            .mobile-toggle { display: flex !important; }
         }
 
         /* Utility */
@@ -90,28 +80,16 @@
             font-weight: 600;
             border-radius: 8px;
         }
-
         .avatar-circle {
-            width: 36px; 
-            height: 36px; 
-            border-radius: 50%; 
-            object-fit: cover;
+            width: 36px; height: 36px; 
+            border-radius: 50%; object-fit: cover;
+            flex-shrink: 0; /* Prevent avatar squishing */
         }
-
-        /* Alerts overlay */
         .alert-float {
-            position: fixed;
-            top: 70px; /* Below mobile header if present */
-            right: 20px;
-            z-index: 1100;
-            width: 90%;
-            max-width: 400px;
-            pointer-events: none; /* Let clicks pass through if transparent */
+            position: fixed; top: 70px; right: 20px; z-index: 1100;
+            width: 90%; max-width: 400px; pointer-events: none;
         }
-        .alert-float .alert {
-            pointer-events: auto; /* Re-enable clicks on the alert itself */
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
+        .alert-float .alert { pointer-events: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
@@ -126,89 +104,93 @@
     </a>
 </div>
 
-<nav class="sidebar p-3 d-flex flex-column" id="sidebar">
-    <div class="mb-3 px-2 d-flex align-items-center justify-content-between">
-        <div class="d-flex align-items-center gap-2">
-            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width:36px;height:36px;">
-                <i class="bi bi-robot"></i>
+<nav class="sidebar shadow-sm" id="sidebar">
+    
+    <div class="p-3">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="d-flex align-items-center gap-2">
+                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width:36px;height:36px;">
+                    <i class="bi bi-robot"></i>
+                </div>
+                <h5 class="m-0 fw-bold text-primary">MindWell</h5>
             </div>
-            <h5 class="m-0 fw-bold text-primary">MindWell</h5>
+            <button class="btn btn-sm btn-light d-lg-none" onclick="toggleSidebar()"><i class="bi bi-x-lg"></i></button>
         </div>
-        <button class="btn btn-sm btn-light d-lg-none" onclick="toggleSidebar()"><i class="bi bi-x-lg"></i></button>
-    </div>
-
-    <div class="px-2 mb-3">
         <input type="text" id="sidebarSearch" class="form-control bg-light border-0" placeholder="Search...">
     </div>
 
-    <ul class="nav flex-column mb-2">
-    <li class="nav-item mb-1">
-        <a href="{% url 'home' %}" class="nav-link text-dark">
-            <i class="bi bi-house-door me-2"></i> Home
-        </a>
-    </li>
-    <li class="nav-item mb-1">
-        <a href="{% url 'chatbot:chat_page' %}" class="nav-link text-dark">
-            <i class="bi bi-stars me-2"></i> AI Assistant
-        </a>
-    </li>
-    <li class="nav-item mb-1">
-        <a href="{% url 'chatbot:analysis_page' %}" class="nav-link text-dark">
-            <i class="bi bi-graph-up-arrow me-2"></i> Analysis
-        </a>
-    </li>
-    <li class="nav-item mb-1">
-        <a href="{% url 'users:profile' request.user.username %}" class="nav-link text-dark">
-            <i class="bi bi-person-circle me-2"></i> My Profile
-        </a>
-    </li>
-</ul>
+    <div class="sidebar-scroll-area px-3">
+        
+        <ul class="nav flex-column mb-3">
+            <li class="nav-item mb-1">
+                <a href="{% url 'home' %}" class="nav-link text-dark"><i class="bi bi-house-door me-2"></i> Home</a>
+            </li>
+            <li class="nav-item mb-1">
+                <a href="{% url 'chatbot:chat_page' %}" class="nav-link text-dark"><i class="bi bi-stars me-2"></i> AI Assistant</a>
+            </li>
+            <li class="nav-item mb-1">
+                <a href="{% url 'chatbot:analysis_page' %}" class="nav-link text-dark"><i class="bi bi-graph-up-arrow me-2"></i> Analysis</a>
+            </li>
+            <li class="nav-item mb-1">
+                <a href="{% url 'users:profile' request.user.username %}" class="nav-link text-dark"><i class="bi bi-person-circle me-2"></i> My Profile</a>
+            </li>
+        </ul>
 
-    <div id="searchResults" class="flex-grow-1 overflow-auto" style="display: none;">
-        <small class="text-muted px-2 fw-bold text-uppercase" style="font-size: 0.7rem;">Search Results</small>
-        <ul class="nav flex-column mt-2" id="resultsList"></ul>
-    </div>
-
-    <div id="defaultSidebar" class="flex-grow-1 d-flex flex-column" style="overflow: hidden;">
-        <hr class="my-2">
-        <div class="d-flex justify-content-between align-items-center mb-2 px-2">
-            <small class="text-muted fw-bold text-uppercase" style="font-size: 0.7rem;">Groups</small>
-            <a href="{% url 'group:group_create' %}" class="text-decoration-none small"><i class="bi bi-plus-lg"></i> New</a>
+        <div id="searchResults" style="display: none;">
+            <small class="text-muted fw-bold text-uppercase mb-2 d-block" style="font-size: 0.75rem;">Search Results</small>
+            <ul class="nav flex-column" id="resultsList"></ul>
         </div>
-        <div class="overflow-auto mb-2 flex-grow-1">
-            <ul class="nav flex-column">
+
+        <div id="defaultSidebar">
+            <hr class="my-2 text-secondary opacity-25">
+            
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <small class="text-muted fw-bold text-uppercase" style="font-size: 0.75rem;">Groups</small>
+                <a href="{% url 'group:group_create' %}" class="text-decoration-none small"><i class="bi bi-plus-lg"></i></a>
+            </div>
+            
+            <ul class="nav flex-column mb-3">
                 {% for g in groups_sidebar %}
-                <li class="nav-item">
-                    <a href="{% url 'group:group_chat' g.slug %}" class="nav-link text-dark d-flex align-items-center gap-2 text-truncate">
-                        <span class="badge bg-light text-dark border">#</span> 
+                <li class="nav-item mb-1">
+                    <a href="{% url 'group:group_chat' g.slug %}" class="nav-link text-dark d-flex align-items-center gap-2 py-1">
+                        <img src="{{ g.get_icon_url }}" class="rounded-circle border" style="width: 24px; height: 24px; object-fit: cover;">
                         <span class="text-truncate">{{ g.name }}</span>
                     </a>
                 </li>
                 {% empty %}
-                <li class="px-2 text-muted small">No groups joined.</li>
+                    <li class="text-muted small fst-italic ms-2">No groups joined.</li>
+                {% endfor %}
+            </ul>
+
+            <hr class="my-2 text-secondary opacity-25">
+
+            <div class="mb-2">
+                <small class="text-muted fw-bold text-uppercase" style="font-size: 0.75rem;">Recent Messages</small>
+            </div>
+            
+            <ul class="nav flex-column">
+                {% for u in recent_users %}
+                <li class="nav-item mb-1">
+                    <a href="{% url 'group:direct_chat' u.username %}" class="nav-link text-dark d-flex align-items-center gap-2 py-2">
+                        <img src="{{ u.profile.get_avatar_url }}" class="avatar-circle" style="width: 32px; height: 32px;">
+                        <div class="d-flex flex-column" style="min-width: 0;">
+                            <span class="text-truncate fw-medium" style="line-height: 1.2;">{{ u.username }}</span>
+                            <small class="text-muted" style="font-size: 0.75rem;">Chat now</small>
+                        </div>
+                        {% if u.profile.is_online %}
+                            <span class="bg-success rounded-circle ms-auto" style="width:8px;height:8px;"></span>
+                        {% endif %}
+                    </a>
+                </li>
                 {% endfor %}
             </ul>
         </div>
-
-        <hr class="my-2">
-        <div class="mb-2 px-2">
-            <small class="text-muted fw-bold text-uppercase" style="font-size: 0.7rem;">Recent Chats</small>
-        </div>
-        <ul class="nav flex-column flex-grow-1 overflow-auto" style="max-height: 30vh;">
-            {% for u in recent_users %}
-            <li class="nav-item">
-                <a href="{% url 'group:direct_chat' u.username %}" class="nav-link text-dark d-flex align-items-center gap-2">
-                    <img src="{{ u.profile.get_avatar_url }}" class="avatar-circle" style="width: 28px; height: 28px;">
-                    <span class="text-truncate">{{ u.username }}</span>
-                    {% if u.profile.is_online %}<span class="bg-success rounded-circle" style="width:8px;height:8px;"></span>{% endif %}
-                </a>
-            </li>
-            {% endfor %}
-        </ul>
     </div>
 
-    <div class="mt-auto pt-3 border-top">
-        <a href="{% url 'users:logout' %}" class="btn btn-light w-100 text-danger border"><i class="bi bi-box-arrow-left"></i> Logout</a>
+    <div class="p-3 border-top mt-auto bg-white">
+        <a href="{% url 'users:logout' %}" class="btn btn-light w-100 text-danger border d-flex align-items-center justify-content-center gap-2">
+            <i class="bi bi-box-arrow-left"></i> Logout
+        </a>
     </div>
 </nav>
 
@@ -254,7 +236,7 @@
             const query = this.value.trim();
 
             if (query.length === 0) {
-                defaultView.style.display = 'flex';
+                defaultView.style.display = 'block'; // Changed from flex to block for standard div
                 resultsView.style.display = 'none';
                 return;
             }
@@ -291,7 +273,7 @@
         });
     }
 
-    // Global Notification Listener
+    // Notification Logic (Kept same as yours)
     {% if request.user.is_authenticated %}
     const notifyScheme = window.location.protocol === "https:" ? "wss" : "ws";
     const notifyUrl = `${notifyScheme}://${window.location.host}/ws/notifications/`;

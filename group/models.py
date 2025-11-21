@@ -20,7 +20,7 @@ class Group(models.Model):
     def get_icon_url(self):
         if self.icon:
             return self.icon.url
-        # Return a default placeholder if no icon
+        print("no icon")
         return "/static/images/group_default.png"
 
 
