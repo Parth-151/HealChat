@@ -12,6 +12,24 @@
     
     .chat-input-area { padding: 15px; background: white; border-top: 1px solid #eee; }
     .sender-name { font-size: 0.75rem; margin-bottom: 4px; font-weight: 600; color: #555; }
+    /* Add this to your existing <style> block */
+#micBtn {
+    background: #ff9f43; /* Orange */
+    border: none;
+    color: white;
+    width: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+}
+#micBtn:hover { background: #e67e22; }
+#micBtn.listening {
+    background: #ef4444; /* Red */
+    animation: pulse 1.5s infinite;
+}
+@keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 </style>
 
 <div class="chat-container">
@@ -42,11 +60,16 @@
     </div>
 
     <div class="chat-input-area">
-        <div class="input-group">
-            <input type="text" id="msgInput" class="form-control border-0 bg-light" placeholder="Type a message..." style="padding: 12px;">
-            <button id="sendBtn" class="btn btn-primary px-4"><i class="bi bi-send-fill"></i></button>
-        </div>
+    <div class="input-group">
+        <button class="btn" type="button" id="micBtn" onclick="toggleSpeech()">
+            <i class="bi bi-mic-fill"></i>
+        </button>
+        
+        <input type="text" id="msgInput" class="form-control border-0 bg-light" placeholder="Type or speak..." style="padding: 12px;">
+        
+        <button id="sendBtn" class="btn btn-primary px-4"><i class="bi bi-send-fill"></i></button>
     </div>
+</div>
 </div>
 <script>
     const other = "{{ other_user.username }}";
@@ -98,5 +121,63 @@
             input.value = "";
         }
     }
+    // --- VOICE LOGIC START ---
+const micBtn = document.getElementById("micBtn");
+const msgInput = document.getElementById("msgInput"); // Note: Group chat uses 'msgInput', not 'aiInput'
+
+let recognition = null;
+let listening = false;
+
+if ('webkitSpeechRecognition' in window) {
+    recognition = new webkitSpeechRecognition();
+    recognition.lang = 'en-IN'; // Default to Indian English (Good for Hinglish)
+    recognition.interimResults = false;
+    recognition.continuous = false;
+
+    recognition.onstart = () => {
+        listening = true;
+        micBtn.classList.add("listening");
+        micBtn.innerHTML = '<i class="bi bi-stop-fill"></i>'; 
+    };
+
+    recognition.onresult = (event) => {
+        const spoken = event.results[0][0].transcript;
+        msgInput.value = spoken; // Puts text into input
+        // Optional: Auto-send
+        // sendMessage(); 
+    };
+
+    recognition.onend = () => {
+        stopSpeech();
+    };
+
+    recognition.onerror = (event) => {
+        console.error("Speech Error:", event.error);
+        if(event.error !== 'no-speech') {
+            // alert("Voice Error: " + event.error); // Optional: Enable if you want alerts
+        }
+        stopSpeech();
+    };
+} else {
+    if(micBtn) micBtn.style.display = 'none'; // Hide if not supported
+}
+
+function toggleSpeech() {
+    if (!recognition) return;
+    if (!listening) {
+        recognition.start();
+    } else {
+        recognition.stop();
+    }
+}
+
+function stopSpeech() {
+    listening = false;
+    if(micBtn) {
+        micBtn.classList.remove("listening");
+        micBtn.innerHTML = '<i class="bi bi-mic-fill"></i>';
+    }
+}
+// --- VOICE LOGIC END ---
 </script>
 {% endblock %}

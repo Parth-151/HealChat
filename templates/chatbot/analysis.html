@@ -4,73 +4,110 @@
 {% block content %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<div class="container p-4 h-100" style="overflow-y: auto;">
+<div class="container-fluid p-4 h-100 w-100" style="overflow-y: auto;">
     <h3 class="fw-bold mb-4">Mental Health Analysis</h3>
     
-    <div class="row g-4">
-        <div class="col-md-6">
-            <div class="card border-0 shadow-sm p-3">
-                <h6 class="text-muted">Mood History</h6>
-                <canvas id="moodChart"></canvas>
-            </div>
+    <div id="loading" class="text-center py-5 w-100">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
         </div>
-        <div class="col-md-6">
-            <div class="card border-0 shadow-sm p-3">
-                <h6 class="text-muted">Stress Levels</h6>
-                <canvas id="stressChart"></canvas>
-            </div>
+        <p class="text-muted mt-2">Analyzing your chat history...</p>
+    </div>
+
+    <div id="emptyState" class="text-center py-5 d-none w-100">
+        <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 100px; height: 100px;">
+            <i class="bi bi-bar-chart-line fs-1 text-secondary"></i>
         </div>
-        <div class="col-md-6 offset-md-3">
-            <div class="card border-0 shadow-sm p-3 text-center">
-                <h6 class="text-muted">Overall Well-being</h6>
-                <div style="max-width: 300px; margin: 0 auto;">
-                    <canvas id="circularChart"></canvas>
+        <h4 class="fw-bold">No Data Available Yet</h4>
+        <p class="text-muted mx-auto" style="max-width: 500px;">
+            Your mental health report is generated based on your conversations with the AI. 
+            Start chatting to visualize your mood trends!
+        </p>
+        <a href="{% url 'chatbot:chat_page' %}" class="btn btn-primary mt-3 rounded-pill px-4 fw-bold">
+            <i class="bi bi-chat-heart"></i> Start Chatting
+        </a>
+    </div>
+
+    <div id="dashboardContent" class="d-none w-100">
+
+<div class="row g-4">
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm p-3">
+                    <h6 class="text-muted">Mood History</h6>
+                    <canvas id="moodChart"></canvas>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm p-3">
+                    <h6 class="text-muted">Stress Levels</h6>
+                    <canvas id="stressChart"></canvas>
+                </div>
+            </div>
+            <div class="col-md-6 offset-md-3">
+                <div class="card border-0 shadow-sm p-3 text-center">
+                    <h6 class="text-muted">Overall Well-being</h6>
+                    <div style="max-width: 300px; margin: 0 auto;">
+                        <canvas id="circularChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="card border-0 shadow-sm mt-4 p-4">
-        <h5 class="fw-bold">Detailed Reports</h5>
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Mood Score</th>
-                        <th>Stress Level</th>
-                        <th>Negativity</th>
-                        <th>Risk</th>
-                    </tr>
-                </thead>
-                <tbody id="reportTable">
-                    <tr><td colspan="5" class="text-center text-muted">Loading data...</td></tr>
-                </tbody>
-            </table>
+        <div class="card border-0 shadow-sm mt-4 p-4">
+            <h5 class="fw-bold">Detailed Reports</h5>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Mood Score</th>
+                            <th>Stress Level</th>
+                            <th>Negativity</th>
+                            <th>Risk</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reportTable">
+                        </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-    // Fetch Data
     fetch("/api/chatbot/api/reports/")
     .then(res => res.json())
     .then(data => {
-        const tbody = document.getElementById("reportTable");
-        tbody.innerHTML = "";
+        document.getElementById("loading").classList.add("d-none");
 
         if(data.length === 0) {
-            tbody.innerHTML = "<tr><td colspan='5' class='text-center'>No chat data to analyze yet.</td></tr>";
+            // Show Empty State
+            document.getElementById("emptyState").classList.remove("d-none");
             return;
         }
 
+        // Show Dashboard
+        document.getElementById("dashboardContent").classList.remove("d-none");
+        
+        const tbody = document.getElementById("reportTable");
         let moods = [], stress = [], dates = [];
 
         data.forEach(r => {
-            const dateStr = new Date(r.timestamp).toLocaleDateString();
+            // Format: "Nov 22" (Short Month + Day)
+            const dateStr = new Date(r.timestamp).toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
             moods.push(r.mood_score);
             stress.push(r.stress_level);
             dates.push(dateStr);
+
+            // Determine Badge Color for Risk
+            let badgeClass = "bg-success";
+            if(r.risk_level === "Medium") badgeClass = "bg-warning text-dark";
+            if(r.risk_level === "High") badgeClass = "bg-danger";
 
             tbody.innerHTML += `
                 <tr>
@@ -78,12 +115,12 @@
                     <td>${r.mood_score}</td>
                     <td>${r.stress_level}</td>
                     <td>${r.negative_percentage}%</td>
-                    <td>${r.risk_level}</td>
+                    <td><span class="badge ${badgeClass}">${r.risk_level}</span></td>
                 </tr>
             `;
         });
 
-        // Charts
+        // Charts Logic
         new Chart(document.getElementById("moodChart"), {
             type: "line",
             data: { 
@@ -100,7 +137,6 @@
             }
         });
 
-        // Averages
         const avgMood = Math.round(moods.reduce((a,b)=>a+b,0) / moods.length);
         const avgStress = Math.round(stress.reduce((a,b)=>a+b,0) / stress.length);
 
@@ -114,6 +150,9 @@
                 }]
             }
         });
+    })
+    .catch(err => {
+        document.getElementById("loading").innerHTML = "<p class='text-danger'>Error loading data.</p>";
     });
 </script>
 {% endblock %}

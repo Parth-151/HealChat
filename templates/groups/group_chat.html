@@ -12,6 +12,28 @@
     
     .chat-input-area { padding: 15px; background: white; border-top: 1px solid #eee; }
     .sender-name { font-size: 0.75rem; margin-bottom: 4px; font-weight: 600; color: #555; }
+   
+#micBtn {
+    background: #ff9f43; /* Orange */
+    border: none;
+    color: white;
+    width: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+}
+#micBtn:hover { background: #e67e22; }
+#micBtn.listening {
+    background: #ef4444; /* Red */
+    animation: pulse 1.5s infinite;
+}
+#anonBtn.active {
+    background-color: #343a40; /* Dark color for anonymous */
+    color: white;
+}
+@keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 </style>
 
 <div class="chat-container">
@@ -31,63 +53,117 @@
 
     <div class="messages-area d-flex flex-column" id="chat-box">
         {% for m in chat_messages %}
-            <div class="message-bubble {% if m.sender == request.user %}msg-sent{% else %}msg-received{% endif %}">
-                {% if m.sender != request.user %}
-                    <a href="{% url 'users:profile' m.sender.username %}" class="sender-name text-decoration-none">
-                        {{ m.sender.username }}
-                    </a>
-                {% endif %}
-                {{ m.content|linebreaksbr }}
-                <div class="text-end opacity-75" style="font-size: 0.7rem; margin-top: 4px;">
-                    {{ m.timestamp|date:"H:i" }}
+    <div class="message-bubble {% if m.sender == request.user %}msg-sent{% else %}msg-received{% endif %}">
+        
+        {% if m.sender != request.user %}
+            {% if m.is_anonymous %}
+                <div class="sender-name text-muted">
+                    <i class="bi bi-incognito"></i> Anonymous
                 </div>
-            </div>
-        {% empty %}
-            <div class="text-center text-muted mt-5">
-                <i class="bi bi-chat-square-dots fs-1"></i>
-                <p>No messages yet. Start the conversation!</p>
-            </div>
-        {% endfor %}
+            {% else %}
+                <a href="{% url 'users:profile' m.sender.username %}" class="sender-name text-decoration-none">
+                    {{ m.sender.username }}
+                </a>
+            {% endif %}
+        {% else %}
+            {% if m.is_anonymous %}
+                <div class="d-flex align-items-center gap-1 mb-1" style="font-size: 0.75rem; opacity: 0.9; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 2px;">
+                    <i class="bi bi-eye-slash-fill"></i> <strong>You (Anonymous)</strong>
+                </div>
+            {% endif %}
+        {% endif %}
+
+        {{ m.content|linebreaksbr }}
+        
+        <div class="text-end opacity-75" style="font-size: 0.7rem; margin-top: 4px;">
+            {{ m.timestamp|date:"H:i" }}
+        </div>
+    </div>
+{% endfor %}
     </div>
 
     {% if is_member %}
     <div class="chat-input-area">
-        <div class="input-group">
-            <input type="text" id="msgInput" class="form-control border-0 bg-light" placeholder="Type a message..." style="padding: 12px;">
-            <button id="sendBtn" class="btn btn-primary px-4"><i class="bi bi-send-fill"></i></button>
-        </div>
+    <div class="input-group">
+        <button class="btn" type="button" id="micBtn" onclick="toggleSpeech()">
+            <i class="bi bi-mic-fill"></i>
+        </button>
+
+        <button class="btn btn-light border" type="button" id="anonBtn" onclick="toggleAnon()" title="Go Anonymous">
+            <i class="bi bi-eye-fill" id="anonIcon"></i>
+        </button>
+        
+        <input type="text" id="msgInput" class="form-control border-0 bg-light" placeholder="Type a message..." style="padding: 12px;">
+        <button id="sendBtn" class="btn btn-primary px-4"><i class="bi bi-send-fill"></i></button>
     </div>
+</div>
+</div>
     {% endif %}
 </div>
 <script>
+    // --- CONFIGURATION ---
     const slug = "{{ group.slug }}";
     const currentUser = "{{ request.user.username }}";
     const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
     const wsUrl = `${wsScheme}://${window.location.host}/ws/groups/${slug}/`;
     
+    // --- ELEMENTS ---
     const socket = new WebSocket(wsUrl);
     const chatBox = document.getElementById("chat-box");
+    const input = document.getElementById("msgInput");
+    const btn = document.getElementById("sendBtn");
+    const micBtn = document.getElementById("micBtn");
+    const anonBtn = document.getElementById('anonBtn');
+    const anonIcon = document.getElementById('anonIcon');
 
-    // Auto scroll to bottom
+    // --- STATE ---
+    let isAnonymous = false;
+    let recognition = null;
+    let listening = false;
+
+    // Scroll to bottom on load
     chatBox.scrollTop = chatBox.scrollHeight;
 
+    // --- 1. WEBSOCKET LOGIC ---
+    // --- 1. WEBSOCKET LOGIC ---
+    // --- 1. WEBSOCKET LOGIC ---
     socket.onmessage = function(e) {
-        const data = JSON.parse(e.data); // Variable is 'data' here
-        const isMe = data.sender === currentUser;
+        const data = JSON.parse(e.data);
         
+        // Check server flag 'is_me'
+        const isMe = data.is_me;
+
         const div = document.createElement("div");
         div.className = `message-bubble ${isMe ? 'msg-sent' : 'msg-received'}`;
         
-        // --- TIME FIX START ---
-        // Use 'data.timestamp', fallback to current time if missing
+        // Time Formatting
         const date = new Date(data.timestamp || Date.now());
         const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        // --- TIME FIX END ---
-        
+
         let html = "";
-        if (!isMe) {
-            html += `<div class="sender-name">${data.sender}</div>`;
+        
+        // --- SENDER HEADER LOGIC ---
+        if (isMe) {
+            // CASE 1: IT IS ME
+            if (data.is_anonymous) {
+                // I sent this anonymously -> Show "You (Anonymous)" label
+                html += `
+                <div class="d-flex align-items-center gap-1 mb-1" style="font-size: 0.75rem; opacity: 0.9; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 2px;">
+                    <i class="bi bi-eye-slash-fill"></i> <strong>You (Anonymous)</strong>
+                </div>`;
+            }
+        } else {
+            // CASE 2: IT IS SOMEONE ELSE
+            if (data.is_anonymous || data.sender === "Anonymous") {
+                // They are anonymous -> Show "Anonymous" label
+                html += `<div class="sender-name text-muted"><i class="bi bi-incognito"></i> Anonymous</div>`;
+            } else {
+                // Real Name
+                html += `<div class="sender-name">${data.sender}</div>`;
+            }
         }
+
+        // MESSAGE CONTENT
         html += `${data.message.replace(/\n/g, '<br>')}`;
         html += `<div class="text-end opacity-75" style="font-size: 0.7rem; margin-top: 4px;">${timeStr}</div>`;
         
@@ -96,22 +172,93 @@
         chatBox.scrollTop = chatBox.scrollHeight;
     };
 
-    const input = document.getElementById("msgInput");
-    const btn = document.getElementById("sendBtn");
+    // --- 2. SEND MESSAGE LOGIC ---
+    function sendMessage() {
+        const message = input.value.trim();
+        if (message) {
+            socket.send(JSON.stringify({ 
+                'message': message,
+                'is_anonymous': isAnonymous 
+            }));
+            input.value = '';
+        }
+    }
 
+    // --- 3. ANONYMOUS TOGGLE ---
+    function toggleAnon() {
+        isAnonymous = !isAnonymous;
+        
+        if (isAnonymous) {
+            anonBtn.classList.add('active');
+            anonIcon.classList.remove('bi-eye-fill');
+            anonIcon.classList.add('bi-eye-slash-fill');
+            input.placeholder = "Type anonymously...";
+        } else {
+            anonBtn.classList.remove('active');
+            anonIcon.classList.remove('bi-eye-slash-fill');
+            anonIcon.classList.add('bi-eye-fill');
+            input.placeholder = "Type a message...";
+        }
+    }
+
+    // --- 4. VOICE LOGIC ---
+    if ('webkitSpeechRecognition' in window) {
+        recognition = new webkitSpeechRecognition();
+        recognition.lang = 'en-IN'; 
+        recognition.interimResults = false;
+        recognition.continuous = false;
+
+        recognition.onstart = () => {
+            listening = true;
+            micBtn.classList.add("listening");
+            micBtn.innerHTML = '<i class="bi bi-stop-fill"></i>'; 
+        };
+
+        recognition.onresult = (event) => {
+            const spoken = event.results[0][0].transcript;
+            input.value = spoken; 
+        };
+
+        recognition.onend = () => {
+            stopSpeech();
+        };
+
+        recognition.onerror = (event) => {
+            console.error("Speech Error:", event.error);
+            stopSpeech();
+        };
+    } else {
+        if(micBtn) micBtn.style.display = 'none';
+    }
+
+    function toggleSpeech() {
+        if (!recognition) return;
+        if (!listening) {
+            recognition.start();
+        } else {
+            recognition.stop();
+        }
+    }
+
+    function stopSpeech() {
+        listening = false;
+        if(micBtn) {
+            micBtn.classList.remove("listening");
+            micBtn.innerHTML = '<i class="bi bi-mic-fill"></i>';
+        }
+    }
+
+    // --- 5. EVENT LISTENERS ---
     if(btn) {
         btn.onclick = sendMessage;
         input.onkeyup = function(e) {
             if (e.keyCode === 13) sendMessage();
         };
     }
+    
+    // Attach click listeners to buttons explicitly if needed
+    if(anonBtn) anonBtn.onclick = toggleAnon;
+    if(micBtn) micBtn.onclick = toggleSpeech;
 
-    function sendMessage() {
-        const message = input.value.trim();
-        if (message) {
-            socket.send(JSON.stringify({ 'message': message }));
-            input.value = '';
-        }
-    }
 </script>
 {% endblock %}

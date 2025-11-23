@@ -4,123 +4,148 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}MindWell AI{% endblock %}</title>
+    <title>{% block title %}HealChat AI{% endblock %}</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     
     <style>
-        /* --- GLOBAL FIXES --- */
-        :root {
-            --sidebar-width: 280px; /* Increased slightly for breathing room */
-            --primary-color: #6c5ce7;
-            --bg-light: #f8f9fa;
-        }
+    /* --- GLOBAL VARS --- */
+    :root {
+        --sidebar-width: 280px;
+        --primary-color: #6c5ce7;
+        --bg-light: #f8f9fa;
+        --header-height: 60px; 
+    }
+    
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body { 
+        background-color: #f0f2f5; 
+        height: 100vh; 
+        width: 100vw;
+        overflow: hidden;
+        margin: 0; 
+        padding: 0;
+    }
+
+    /* --- SIDEBAR STYLES --- */
+    .sidebar {
+        width: var(--sidebar-width);
+        height: 100vh;
+        position: fixed;
+        top: 0; left: 0;
+        background: white;
+        border-right: 1px solid #dee2e6;
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.3s ease;
+        z-index: 1050;
+    }
+
+    .sidebar-scroll-area {
+        flex-grow: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding-bottom: 20px;
+    }
+    .sidebar-scroll-area::-webkit-scrollbar { width: 5px; }
+    .sidebar-scroll-area::-webkit-scrollbar-thumb { background: #e9ecef; border-radius: 4px; }
+
+    /* --- MAIN CONTENT AREA --- */
+    .main-content {
+        position: absolute;
+        top: 0; right: 0; bottom: 0;
+        left: var(--sidebar-width); 
+        overflow-y: auto;
+        overflow-x: hidden;
+        display: flex;
+        flex-direction: column;
+        transition: left 0.3s ease;
         
-        *, *::before, *::after { box-sizing: border-box; }
+        /* FIX 1: ANIMATION ON CONTENT ONLY */
+        animation: fadeInContent 0.4s ease-out forwards;
+    }
 
-        body { 
-            background-color: #f0f2f5; 
-            height: 100vh; 
-            width: 100vw;
-            overflow: hidden;
-            margin: 0; padding: 0;
-        }
+    @keyframes fadeInContent {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
 
-        /* --- SIDEBAR --- */
-        .sidebar {
-            width: var(--sidebar-width);
-            height: 100vh;
-            position: fixed;
-            top: 0; left: 0;
-            background: white;
-            border-right: 1px solid #dee2e6;
-            display: flex;           /* Flexbox for layout */
-            flex-direction: column;  /* Stack vertical */
-            transition: transform 0.3s ease;
-            z-index: 1050;
-        }
+    /* --- GUEST MODE (No Sidebar) --- */
+    body.guest-mode .main-content {
+        left: 0 !important;
+        width: 100% !important;
+        /* FIX 2: Add top padding so Login/Signup don't stick to edge */
+        padding-top: 40px; 
+    }
 
-        /* The Scrollable Middle Section */
-        .sidebar-scroll-area {
-            flex-grow: 1;            /* Take all available remaining height */
-            overflow-y: auto;        /* Enable scrolling here */
-            overflow-x: hidden;
-            padding-bottom: 20px;    /* Space before footer */
-        }
+    /* --- RESPONSIVE (Mobile) --- */
+    @media (max-width: 992px) {
+        .sidebar { transform: translateX(-100%); }
+        .sidebar.active { transform: translateX(0); box-shadow: 5px 0 15px rgba(0,0,0,0.1); }
+        .main-content { left: 0; width: 100%; }
         
-        /* Custom Scrollbar for sidebar */
-        .sidebar-scroll-area::-webkit-scrollbar { width: 5px; }
-        .sidebar-scroll-area::-webkit-scrollbar-thumb { background: #e9ecef; border-radius: 4px; }
+        /* Push content down when Logged In (so Header doesn't cover it) */
+        body:not(.guest-mode) .main-content {
+            padding-top: var(--header-height); 
+        }
+    }
 
-        /* --- MAIN CONTENT --- */
-        .main-content {
-            position: absolute;
-            top: 0; right: 0; bottom: 0;
-            left: var(--sidebar-width);
-            overflow-y: auto;
-            overflow-x: hidden;
-            display: flex;
-            flex-direction: column;
-            transition: left 0.3s ease;
-        }
-
-        /* --- RESPONSIVE --- */
-        @media (max-width: 992px) {
-            .sidebar { transform: translateX(-100%); }
-            .sidebar.active { transform: translateX(0); box-shadow: 5px 0 15px rgba(0,0,0,0.1); }
-            .main-content { left: 0; width: 100%; }
-            .mobile-toggle { display: flex !important; }
-        }
-
-        /* Utility */
-        .nav-link.active {
-            background-color: #eef2ff;
-            color: var(--primary-color);
-            font-weight: 600;
-            border-radius: 8px;
-        }
-        .avatar-circle {
-            width: 36px; height: 36px; 
-            border-radius: 50%; object-fit: cover;
-            flex-shrink: 0; /* Prevent avatar squishing */
-        }
-        .alert-float {
-            position: fixed; top: 70px; right: 20px; z-index: 1100;
-            width: 90%; max-width: 400px; pointer-events: none;
-        }
-        .alert-float .alert { pointer-events: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-    </style>
+    /* Utility */
+    .nav-link.active {
+        background-color: #eef2ff;
+        color: var(--primary-color);
+        font-weight: 600;
+        border-radius: 8px;
+    }
+    .avatar-circle {
+        width: 36px; height: 36px; 
+        border-radius: 50%; object-fit: cover;
+        flex-shrink: 0;
+    }
+    
+    .alert-float {
+        position: fixed; top: 80px; right: 20px; z-index: 1100;
+        width: 90%; max-width: 400px; pointer-events: none;
+    }
+    .alert-float .alert { pointer-events: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+</style>
 </head>
-<body>
+<body class="{% if not user.is_authenticated %}guest-mode{% endif %}">
 
-<div class="d-lg-none bg-white p-3 border-bottom d-flex align-items-center justify-content-between mobile-toggle" style="display: none; height: 60px; position: sticky; top: 0; z-index: 1040;">
+{% if user.is_authenticated %}
+<div class="d-lg-none bg-white p-3 border-bottom d-flex align-items-center justify-content-between mobile-toggle" style="height: var(--header-height); position: fixed; top: 0; left: 0; right: 0; z-index: 1040;">
     <button class="btn btn-light border" onclick="toggleSidebar()">
         <i class="bi bi-list fs-4"></i>
     </button>
-    <span class="fw-bold text-primary">MindWell AI</span>
+    <span class="fw-bold text-primary">HealChat AI</span>
     <a href="{% url 'users:profile' request.user.username %}" class="text-decoration-none">
-        <img src="{{ request.user.profile.get_avatar_url }}" class="avatar-circle">
+        {% if request.user.profile.avatar %}
+            <img src="{{ request.user.profile.avatar.url }}" class="avatar-circle">
+        {% else %}
+            <img src="{% static 'avatars/defaults/default1.png' %}" class="avatar-circle">
+        {% endif %}
     </a>
 </div>
+{% endif %}
 
+{% if user.is_authenticated %}
 <nav class="sidebar shadow-sm" id="sidebar">
-    
     <div class="p-3">
         <div class="d-flex align-items-center justify-content-between mb-3">
             <div class="d-flex align-items-center gap-2">
                 <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width:36px;height:36px;">
                     <i class="bi bi-robot"></i>
                 </div>
-                <h5 class="m-0 fw-bold text-primary">MindWell</h5>
+                <h5 class="m-0 fw-bold text-primary">HealChat</h5>
             </div>
             <button class="btn btn-sm btn-light d-lg-none" onclick="toggleSidebar()"><i class="bi bi-x-lg"></i></button>
         </div>
-        <input type="text" id="sidebarSearch" class="form-control bg-light border-0" placeholder="Search...">
+        <input type="text" id="sidebarSearch" class="form-control bg-light border-0" placeholder="Search groups...">
     </div>
 
     <div class="sidebar-scroll-area px-3">
-        
         <ul class="nav flex-column mb-3">
             <li class="nav-item mb-1">
                 <a href="{% url 'home' %}" class="nav-link text-dark"><i class="bi bi-house-door me-2"></i> Home</a>
@@ -134,6 +159,11 @@
             <li class="nav-item mb-1">
                 <a href="{% url 'users:profile' request.user.username %}" class="nav-link text-dark"><i class="bi bi-person-circle me-2"></i> My Profile</a>
             </li>
+            <li class="nav-item mb-1">
+                <a href="{% url 'users:feedback' %}" class="nav-link text-dark">
+                    <i class="bi bi-chat-square-quote me-2"></i> Feedback
+                </a>
+            </li>
         </ul>
 
         <div id="searchResults" style="display: none;">
@@ -143,46 +173,48 @@
 
         <div id="defaultSidebar">
             <hr class="my-2 text-secondary opacity-25">
-            
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <small class="text-muted fw-bold text-uppercase" style="font-size: 0.75rem;">Groups</small>
-                <a href="{% url 'group:group_create' %}" class="text-decoration-none small"><i class="bi bi-plus-lg"></i></a>
+                <a href="{% url 'group:group_create' %}" class="text-decoration-none small" title="Create Group"><i class="bi bi-plus-lg"></i></a>
             </div>
-            
             <ul class="nav flex-column mb-3">
-                {% for g in groups_sidebar %}
-                <li class="nav-item mb-1">
-                    <a href="{% url 'group:group_chat' g.slug %}" class="nav-link text-dark d-flex align-items-center gap-2 py-1">
-                        <img src="{{ g.get_icon_url }}" class="rounded-circle border" style="width: 24px; height: 24px; object-fit: cover;">
-                        <span class="text-truncate">{{ g.name }}</span>
-                    </a>
-                </li>
-                {% empty %}
+                {% if groups_sidebar %}
+                    {% for g in groups_sidebar %}
+                    <li class="nav-item mb-1">
+                        <a href="{% url 'group:group_chat' g.slug %}" class="nav-link text-dark d-flex align-items-center gap-2 py-1">
+                            <img src="{{ g.get_icon_url }}" class="rounded-circle border" style="width: 24px; height: 24px; object-fit: cover;">
+                            <span class="text-truncate">{{ g.name }}</span>
+                        </a>
+                    </li>
+                    {% endfor %}
+                {% else %}
                     <li class="text-muted small fst-italic ms-2">No groups joined.</li>
-                {% endfor %}
+                {% endif %}
             </ul>
 
             <hr class="my-2 text-secondary opacity-25">
-
             <div class="mb-2">
                 <small class="text-muted fw-bold text-uppercase" style="font-size: 0.75rem;">Recent Messages</small>
             </div>
-            
             <ul class="nav flex-column">
-                {% for u in recent_users %}
-                <li class="nav-item mb-1">
-                    <a href="{% url 'group:direct_chat' u.username %}" class="nav-link text-dark d-flex align-items-center gap-2 py-2">
-                        <img src="{{ u.profile.get_avatar_url }}" class="avatar-circle" style="width: 32px; height: 32px;">
-                        <div class="d-flex flex-column" style="min-width: 0;">
-                            <span class="text-truncate fw-medium" style="line-height: 1.2;">{{ u.username }}</span>
-                            <small class="text-muted" style="font-size: 0.75rem;">Chat now</small>
-                        </div>
-                        {% if u.profile.is_online %}
-                            <span class="bg-success rounded-circle ms-auto" style="width:8px;height:8px;"></span>
-                        {% endif %}
-                    </a>
-                </li>
-                {% endfor %}
+                {% if recent_users %}
+                    {% for u in recent_users %}
+                    <li class="nav-item mb-1">
+                        <a href="{% url 'group:direct_chat' u.username %}" class="nav-link text-dark d-flex align-items-center gap-2 py-2">
+                            <img src="{{ u.profile.get_avatar_url }}" class="avatar-circle" style="width: 32px; height: 32px;">
+                            <div class="d-flex flex-column" style="min-width: 0;">
+                                <span class="text-truncate fw-medium" style="line-height: 1.2;">{{ u.username }}</span>
+                                <small class="text-muted" style="font-size: 0.75rem;">Chat now</small>
+                            </div>
+                            {% if u.profile.is_online %}
+                                <span class="bg-success rounded-circle ms-auto" style="width:8px;height:8px;"></span>
+                            {% endif %}
+                        </a>
+                    </li>
+                    {% endfor %}
+                {% else %}
+                    <li class="text-muted small fst-italic ms-2">No recent chats.</li>
+                {% endif %}
             </ul>
         </div>
     </div>
@@ -193,12 +225,14 @@
         </a>
     </div>
 </nav>
+{% endif %}
 
 <div class="main-content">
+    
     {% if messages %}
     <div class="alert-float">
         {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show bg-white border-start border-4 border-{{ message.tags }}" role="alert">
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show bg-white border-start border-4 border-{{ message.tags }} shadow" role="alert">
                 {{ message }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
@@ -206,9 +240,7 @@
     </div>
     <script>
         setTimeout(() => {
-            document.querySelectorAll('.alert').forEach(a => {
-                try { new bootstrap.Alert(a).close(); } catch(e){}
-            });
+            document.querySelectorAll('.alert').forEach(a => { try { new bootstrap.Alert(a).close(); } catch(e){} });
         }, 4000);
     </script>
     {% endif %}
@@ -218,25 +250,24 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Toggle Sidebar
     function toggleSidebar() {
         document.getElementById('sidebar').classList.toggle('active');
     }
 
-    // Search Logic
+    // Search Logic (Only runs if sidebar exists)
     const searchInput = document.getElementById('sidebarSearch');
-    const defaultView = document.getElementById('defaultSidebar');
-    const resultsView = document.getElementById('searchResults');
-    const resultsList = document.getElementById('resultsList');
-    let searchTimeout = null;
-
     if(searchInput) {
+        const defaultView = document.getElementById('defaultSidebar');
+        const resultsView = document.getElementById('searchResults');
+        const resultsList = document.getElementById('resultsList');
+        let searchTimeout = null;
+
         searchInput.addEventListener('keyup', function() {
             clearTimeout(searchTimeout);
             const query = this.value.trim();
 
             if (query.length === 0) {
-                defaultView.style.display = 'block'; // Changed from flex to block for standard div
+                defaultView.style.display = 'block';
                 resultsView.style.display = 'none';
                 return;
             }
@@ -253,14 +284,12 @@
                             resultsList.innerHTML = '<li class="px-2 text-muted small">No results found.</li>';
                             return;
                         }
-                        // Groups
                         if (data.groups.length > 0) {
                             resultsList.innerHTML += '<li class="px-2 text-muted small fw-bold mt-2">Groups</li>';
                             data.groups.forEach(g => {
                                 resultsList.innerHTML += `<li class="nav-item"><a href="/groups/${g.slug}/" class="nav-link text-dark"><span class="badge bg-info text-dark me-2">#</span>${g.name}</a></li>`;
                             });
                         }
-                        // Users
                         if (data.users.length > 0) {
                             resultsList.innerHTML += '<li class="px-2 text-muted small fw-bold mt-2">People</li>';
                             data.users.forEach(u => {
@@ -273,29 +302,29 @@
         });
     }
 
-    // Notification Logic (Kept same as yours)
+    // WebSocket Notification Listener
     {% if request.user.is_authenticated %}
-    const notifyScheme = window.location.protocol === "https:" ? "wss" : "ws";
-    const notifyUrl = `${notifyScheme}://${window.location.host}/ws/notifications/`;
-    const notifySocket = new WebSocket(notifyUrl);
+        const notifyScheme = window.location.protocol === "https:" ? "wss" : "ws";
+        const notifyUrl = `${notifyScheme}://${window.location.host}/ws/notifications/`;
+        const notifySocket = new WebSocket(notifyUrl);
 
-    notifySocket.onmessage = function(e) {
-        const data = JSON.parse(e.data);
-        const alertHtml = `
-            <div class="alert alert-info alert-dismissible fade show bg-white shadow border-start border-4 border-info" role="alert">
-                <strong>New message from ${data.sender}</strong><br>${data.message}<br>
-                <a href="${data.link}" class="btn btn-sm btn-primary mt-2">Reply</a>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>`;
-        
-        let container = document.querySelector('.alert-float');
-        if (!container) {
-            container = document.createElement('div');
-            container.className = 'alert-float';
-            document.querySelector('.main-content').prepend(container);
-        }
-        container.insertAdjacentHTML('beforeend', alertHtml);
-    };
+        notifySocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            const alertHtml = `
+                <div class="alert alert-info alert-dismissible fade show bg-white shadow border-start border-4 border-info" role="alert">
+                    <strong>New message from ${data.sender}</strong><br>${data.message}<br>
+                    <a href="${data.link}" class="btn btn-sm btn-primary mt-2">Reply</a>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>`;
+            
+            let container = document.querySelector('.alert-float');
+            if (!container) {
+                container = document.createElement('div');
+                container.className = 'alert-float';
+                document.querySelector('.main-content').prepend(container);
+            }
+            container.insertAdjacentHTML('beforeend', alertHtml);
+        };
     {% endif %}
 </script>
 </body>

@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Sign Up - HealChat AI{% endblock %}
+
+{% block content %}
+<div class="container d-flex align-items-center justify-content-center" style="min-height: 85vh;">
+    <div class="card shadow-lg border-0 rounded-4" style="width: 100%; max-width: 450px;">
+        <div class="card-body p-5">
+            
+            <h2 class="text-center mb-4 fw-bold text-primary">Create Account</h2>
+            
+            <form method="POST">
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                    <input type="text" name="username" class="form-control ai-input py-2 bg-light border-0" placeholder="Username" required>
+                </div>
+                
+                <div class="mb-3">
+                    <input type="email" name="email" class="form-control ai-input py-2 bg-light border-0" placeholder="Email" required>
+                </div>
+                
+                <div class="mb-3">
+                    <input type="password" name="password" class="form-control ai-input py-2 bg-light border-0" placeholder="Password" required>
+                </div>
+
+                <div class="mb-4">
+                    <input type="password" name="confirm_password" class="form-control ai-input py-2 bg-light border-0" placeholder="Confirm Password" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-bold rounded-pill">Create Account</button>
+            </form>
+
+            <div class="text-center mt-4">
+                <a href="{% url 'users:login' %}" class="text-decoration-none small">
+                    Already have an account? <strong>Login</strong>
+                </a>
+            </div>
+
+            <div class="text-center mt-3">
+                <a href="{% url 'home' %}" class="btn btn-outline-secondary btn-sm w-100 rounded-pill">
+                    <i class="bi bi-house-door"></i> Go to Home
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

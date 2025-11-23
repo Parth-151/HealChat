@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}Feedback - HealChat AI{% endblock %}
+
+{% block content %}
+<div class="container py-5 h-100" style="overflow-y: auto;">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                            <i class="bi bi-envelope-heart fs-3 text-primary"></i>
+                        </div>
+                        <h3 class="fw-bold">We Value Your Voice</h3>
+                        <p class="text-muted small">Help us improve HealChat AI</p>
+                    </div>
+
+                    <form method="POST">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-muted">Topic</label>
+                            <select name="subject" class="form-select bg-light border-0 py-2" required>
+                                <option value="Appreciation">I love this app!</option>
+                                <option value="Suggestion">I have a suggestion</option>
+                                <option value="Bug">I found a bug</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-muted">Rating</label>
+                            <select name="rating" class="form-select bg-light border-0 py-2">
+                                <option value="5">⭐⭐⭐⭐⭐ - Excellent</option>
+                                <option value="4">⭐⭐⭐⭐ - Good</option>
+                                <option value="3">⭐⭐⭐ - Average</option>
+                                <option value="2">⭐⭐ - Poor</option>
+                                <option value="1">⭐ - Terrible</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold small text-muted">Message</label>
+                            <textarea name="message" class="form-control bg-light border-0" rows="5" placeholder="Tell us more..." required></textarea>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary fw-bold py-2 rounded-pill shadow-sm">
+                                Submit Feedback <i class="bi bi-send-fill ms-2"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

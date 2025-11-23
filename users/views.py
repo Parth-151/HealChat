@@ -1,3 +1,4 @@
+# users/views.py
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -7,21 +8,36 @@ from django.db.models import Q
 from .models import Profile
 from .forms import ProfileUpdateForm
 from chatbot.models import AnalysisReport
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 
-# --- IMPORTS FROM GROUP APP (Crucial for Sidebar) ---
+# --- IMPORTS FROM GROUP APP ---
 from group.models import Group, DirectMessage
 import os
+
+# ... (keep your existing imports) ...
+
+# 1. Make sure you have this import if it's missing
+from django.shortcuts import render
+
+# 2. Add this NEW view function for Home
+def home(request):
+    context = {}
+    # Only fetch sidebar data if logged in
+    if request.user.is_authenticated:
+        context = sidebar_context(request)
+    
+    return render(request, 'home.html', context)
 
 # ---------------- Sidebar Context Helper ---------------- #
 def sidebar_context(request):
     """
     Fetches Groups and Recent Chats for the Sidebar.
-    Used by Profile, Edit Profile, and Avatar pages.
     """
     if not request.user.is_authenticated:
         return {}
 
-    # 1. Fetch Groups (Logged-in user is a member)
+    # 1. Fetch Groups
     groups_sidebar = Group.objects.filter(members=request.user).order_by("-created_at")
 
     # 2. Fetch Recent Direct Chats
@@ -36,7 +52,6 @@ def sidebar_context(request):
         if dm.receiver_id != request.user.id:
             user_ids.append(dm.receiver_id)
 
-    # Filter unique users while preserving order (Most recent first)
     seen = set()
     recent_users = []
     for uid in user_ids:
@@ -44,26 +59,26 @@ def sidebar_context(request):
             seen.add(uid)
             try:
                 user = User.objects.get(id=uid)
-                # Ensure profile exists to prevent template crash
                 if not hasattr(user, 'profile'):
                     Profile.objects.create(user=user)
                 recent_users.append(user)
             except User.DoesNotExist:
                 continue
             
-            if len(recent_users) >= 10: # Limit to 10
+            if len(recent_users) >= 10:
                 break
     
-    # DEBUG: Print to terminal to verify it works
-    print(f"Sidebar Loaded for {request.user}: {len(groups_sidebar)} Groups, {len(recent_users)} Chats")
-
     return {
         "groups_sidebar": groups_sidebar, 
         "recent_users": recent_users
     }
 
 # ---------------- Auth Views ---------------- #
+
 def login_page(request):
+    if request.user.is_authenticated:
+        return redirect('group:chat_home')
+
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
@@ -71,11 +86,9 @@ def login_page(request):
         if user:
             login(request, user)
             messages.success(request, 'Login successful!')
-            return redirect('group:chat_home') # Redirect to Chat Home
+            return redirect('group:chat_home')
         messages.error(request, 'Invalid username or password.')
     
-    if request.user.is_authenticated:
-        return redirect('group:chat_home')
     return render(request, 'login.html')
 
 @login_required
@@ -85,51 +98,72 @@ def logout_page(request):
     return redirect('/')
 
 def signup_view(request):
+    # If already logged in, redirect
+    if request.user.is_authenticated:
+        return redirect('group:chat_home')
+
     if request.method == 'POST':
         email = request.POST.get('email')
         username = request.POST.get('username')
-        password1 = request.POST.get('password')
-        confirm_password = request.POST.get('confirm_password')
+        pass1 = request.POST.get('password')
+        pass2 = request.POST.get('confirm_password')
 
-        if password1 != confirm_password:
-            messages.error(request, 'Passwords do not match.')
-            return render(request, 'signup.html')
+        # Validation 1: Empty Fields
+        if not username or not email or not pass1:
+            messages.error(request, "Please fill in all fields.")
+            return render(request, 'users/signup.html')
 
-        if User.objects.filter(email=email).exists():
-            messages.error(request, 'Email already in use.')
-            return render(request, 'signup.html')
+        # Validation 2: Passwords Match
+        if pass1 != pass2:
+            messages.error(request, "Passwords do not match.")
+            return render(request, 'users/signup.html')
 
+        # Validation 3: Uniqueness
         if User.objects.filter(username=username).exists():
-            messages.error(request, 'Username already taken.')
-            return render(request, 'signup.html')
-
-        user = User.objects.create_user(username=username, email=email, password=password1)
-        user.save()
-        # Create Profile immediately
-        if not hasattr(user, 'profile'):
-            Profile.objects.create(user=user)
-            
-        messages.success(request, 'Signup successful! Please login.')
-        return redirect('users:login')
+            messages.error(request, "That username is already taken.")
+            return render(request, 'users/signup.html')
         
-    if request.user.is_authenticated:
-        return redirect('group:chat_home')
-    return render(request, 'signup.html')
+        if User.objects.filter(email=email).exists():
+            messages.error(request, "Email already registered.")
+            return render(request, 'users/signup.html')
+
+        # Validation 4: Password Strength
+        try:
+            validate_password(pass1)
+        except ValidationError as e:
+            for err in e.messages:
+                messages.error(request, err)
+            return render(request, 'users/signup.html')
+
+        # Creation
+        try:
+            user = User.objects.create_user(username=username, email=email, password=pass1)
+            user.save()
+            # Profile created by signals usually, but good to be safe
+            if not hasattr(user, 'profile'):
+                Profile.objects.create(user=user)
+            
+            messages.success(request, "Account created! Please log in.")
+            return redirect('users:login')
+            
+        except Exception as e:
+            messages.error(request, f"Error: {e}")
+            return render(request, 'users/signup.html')
+
+    return render(request, 'users/signup.html')
 
 # ---------------- Profile Views ---------------- #
 
 @login_required
 def profile(request, username):
     user_obj = get_object_or_404(User, username=username)
-    
-    # Ensure profile exists
     if not hasattr(user_obj, 'profile'):
         Profile.objects.create(user=user_obj)
         
     profile_obj = user_obj.profile
     is_owner = (request.user == user_obj)
 
-    # Analysis Report
+    # Get Stats
     last_report = AnalysisReport.objects.filter(user=user_obj).order_by('-timestamp').first()
     short_analysis = None
     if last_report:
@@ -139,13 +173,12 @@ def profile(request, username):
             "negative": last_report.negative_percentage,
         }
 
-    # Groups for the Profile Card (NOT the sidebar)
+    # Groups for Profile Card
     groups = Group.objects.filter(members=user_obj)
     
-    # --- KEY FIX: Get Sidebar Data ---
+    # --- SIDEBAR DATA ---
     context = sidebar_context(request)
     
-    # Merge data
     context.update({
         "user_obj": user_obj,
         "profile": profile_obj,
@@ -156,6 +189,8 @@ def profile(request, username):
 
     return render(request, "users/profile.html", context)
 
+
+
 @login_required
 def edit_profile(request):
     profile_obj = request.user.profile
@@ -163,15 +198,13 @@ def edit_profile(request):
         form = ProfileUpdateForm(request.POST, request.FILES, instance=profile_obj)
         if form.is_valid():
             form.save()
-            messages.success(request, "Profile updated successfully!")
+            messages.success(request, "Profile updated!")
             return redirect("users:profile", username=request.user.username)
     else:
         form = ProfileUpdateForm(instance=profile_obj)
     
-    # --- KEY FIX: Get Sidebar Data ---
     context = sidebar_context(request)
     context['form'] = form
-    
     return render(request, "users/edit_profile.html", context)
 
 @login_required
@@ -189,11 +222,35 @@ def choose_avatar(request):
             profile.preset_avatar = selected
             profile.avatar = None 
             profile.save()
-            messages.success(request, "Avatar updated successfully!")
+            messages.success(request, "Avatar updated!")
             return redirect("users:profile", username=request.user.username)
 
-    # --- KEY FIX: Get Sidebar Data ---
     context = sidebar_context(request)
     context['avatars'] = avatars
-    
     return render(request, "users/choose_avatar.html", context)
+
+# users/views.py
+from .models import Feedback # Import the model
+
+@login_required
+def feedback_view(request):
+    # 1. Sidebar Context (So sidebar doesn't disappear)
+    context = sidebar_context(request)
+    
+    if request.method == "POST":
+        subject = request.POST.get('subject')
+        message = request.POST.get('message')
+        rating = request.POST.get('rating')
+        
+        # Save to DB
+        Feedback.objects.create(
+            user=request.user,
+            subject=subject,
+            message=message,
+            rating=rating
+        )
+        
+        messages.success(request, "Thank you! Your feedback has been recorded.")
+        return redirect('home') # Redirects to home after submitting
+
+    return render(request, 'users/feedback.html', context)

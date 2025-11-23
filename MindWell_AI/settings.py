@@ -26,7 +26,16 @@ SECRET_KEY = 'django-insecure-6+k7hpss_zuaznh_$)$)x11io(ymu$=(wybm2zd)$dt(0=xd4!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*'] 
+
+# 2. Trust Ngrok for Login/Forms
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.ngrok-free.app', 
+    'https://*.ngrok-free.dev',  # <--- ADD THIS LINE
+    'https://glib-nonlethargically-geraldo.ngrok-free.dev', # Optional: Add your specific link to be 100% sure
+    'http://127.0.0.1', 
+    'http://localhost'
+]
 
 
 # Application definition

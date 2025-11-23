@@ -1,4 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
+
+from users.models import Profile
 from .models import Group, GroupMessage, DirectMessage
 # Ensure you import both forms
 from .forms import CreateGroupForm, GroupUpdateForm 
@@ -45,30 +47,37 @@ def search(request):
 def sidebar_context(request):
     if not request.user.is_authenticated:
         return {}
-    
-    # 1. Groups
+
     groups_sidebar = Group.objects.filter(members=request.user).order_by("-created_at")
-    
-    # 2. Recent Direct Chats
-    direct_msgs = DirectMessage.objects.filter(Q(sender=request.user) | Q(receiver=request.user)).order_by("-timestamp")
+
+    # Get IDs from Direct Messages
+    direct_msgs = DirectMessage.objects.filter(
+        Q(sender=request.user) | Q(receiver=request.user)
+    ).order_by("-timestamp")
+
     user_ids = []
-    for dm in direct_msgs:
-        if dm.sender_id != request.user.id:
-            user_ids.append(dm.sender_id)
-        if dm.receiver_id != request.user.id:
-            user_ids.append(dm.receiver_id)
-            
     seen = set()
-    recent_users = []
-    for uid in user_ids:
-        if uid not in seen and uid != request.user.id:
-            seen.add(uid)
-            recent_users.append(User.objects.get(id=uid))
-            if len(recent_users) >= 10:
-                break
+    
+    for dm in direct_msgs:
+        # Determine the "Other" user ID
+        other_id = dm.receiver_id if dm.sender_id == request.user.id else dm.sender_id
+        
+        if other_id not in seen:
+            seen.add(other_id)
+            user_ids.append(other_id)
+            if len(user_ids) >= 10: break
+    
+    # Fetch all user objects in one go (Optimization)
+    # Note: This loses order, so we sort them back in Python if needed, 
+    # but for sidebar 'recent_users' simply listing them is usually fine.
+    recent_users = User.objects.filter(id__in=user_ids)
+    
+    # Ensure profiles exist (Safety check)
+    for u in recent_users:
+        if not hasattr(u, 'profile'):
+            Profile.objects.create(user=u)
 
     return {"groups_sidebar": groups_sidebar, "recent_users": recent_users}
-
 
 # In group/views.py
 

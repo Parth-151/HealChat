@@ -1,64 +1,67 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mind Well - Home</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    /* ... [KEEP YOUR EXISTING CSS EXACTLY AS IT IS] ... */
-    /* I am not pasting the CSS here to save space, assume your CSS block is here */
-    :root{ --bg: #f6f4ef; --panel: #ffffff; --muted: #7d8a93; --accent1: #b6d3c8; --accent2: #9fb3e5; --text: #102029; --glass: rgba(255,255,255,0.6); }
-    /* ... paste the rest of your CSS here ... */
-    /* Ensure you keep your CSS */
-    body { font-family: 'Inter', sans-serif; margin:0; background: var(--bg); }
-    header { display: flex; justify-content: space-between; padding: 20px; align-items: center; }
-    .nav-btn { padding: 10px 20px; border-radius: 20px; border: none; cursor: pointer; font-weight: 600; text-decoration: none; color: #000; display: inline-block; }
-    .nav-items { display: flex; gap: 10px; }
-    .login { background: transparent; border: 1px solid #ccc; }
-    .signup { background: #fff; }
-    .about { background: linear-gradient(90deg,var(--accent1),var(--accent2)); }
-    .hero { padding: 50px; text-align: center; }
-  </style>
-</head>
-<body>
-  <header>
-    <div style="display:flex;align-items:center;gap:12px">
-      <div class="logo" style="font-weight: bold; font-size: 1.2rem;">
-        🧠 Mind Well
-      </div>
-    </div>
+{% extends 'base.html' %}
+{% load static %}
 
-    <nav>
-      <div class="nav-items">
-        {% if user.is_authenticated %}
-            <a href="{% url 'users:profile' user.username %}" class="nav-btn about">My Profile</a>
-            <a href="{% url 'users:logout' %}" class="nav-btn login">Logout</a>
-        {% else %}
-            <a href="{% url 'users:signup' %}" class="nav-btn signup">Sign Up</a>
-            <a href="{% url 'users:login' %}" class="nav-btn login">Login</a>
-        {% endif %}
-      </div>
-    </nav>
-  </header>
+{% block title %}HealChat AI - Mental Health Support{% endblock %}
 
-  <main class="container">
-    <section class="hero">
-        <h1 style="font-size: 3rem; margin-bottom: 20px;">YOUR JOURNEY TO WELLBEING BEGINS HERE</h1>
-        <p style="font-size: 1.2rem; color: #666; margin-bottom: 30px;">Find support, resources, and community for a healthier mind</p>
-        
-        <div style="display: flex; justify-content: center; gap: 15px;">
+{% block content %}
+<div class="container-fluid p-0" style="background: linear-gradient(to bottom right, #6c5ce7, #8e44ad); color: white; margin-top: -40px;">
+    <div class="container py-5 text-center">
+        <div class="py-5">
+            <h1 class="display-3 fw-bold mb-3">A Safe Space to Talk.</h1>
+            <p class="lead mb-4 opacity-75" style="font-size: 1.3rem; max-width: 700px; margin: 0 auto;">
+                Feeling overwhelmed? HealChat is your 24/7 companion for mental wellness. 
+                Chat anonymously, track your mood, and find community support.
+            </p>
+            
             {% if user.is_authenticated %}
-                <a href="{% url 'chatbot:chat_page' %}" class="nav-btn about" style="padding: 15px 30px; font-size: 1.1rem;">Start Chatting</a>
+                <a href="{% url 'chatbot:chat_page' %}" class="btn btn-light text-primary fw-bold btn-lg px-5 rounded-pill shadow">
+                    <i class="bi bi-chat-heart-fill"></i> Go to Dashboard
+                </a>
             {% else %}
-                <a href="{% url 'users:login' %}" class="nav-btn about" style="padding: 15px 30px; font-size: 1.1rem;">Get Started</a>
+                <div class="d-flex justify-content-center gap-3">
+                    <a href="{% url 'users:signup' %}" class="btn btn-light text-primary fw-bold px-4 py-2 rounded-pill shadow-sm">Get Started</a>
+                    <a href="{% url 'users:login' %}" class="btn btn-outline-light fw-bold px-4 py-2 rounded-pill">Login</a>
+                </div>
             {% endif %}
         </div>
-    </section>
-    </main>
+    </div>
+</div>
 
-  <script>
-      // ... your existing scripts ...
-  </script>
-</body>
-</html>
+<div class="container py-5">
+    <div class="row text-center g-4">
+        <div class="col-md-4">
+            <div class="p-4 h-100 bg-white shadow-sm rounded-4 border-bottom border-4 border-primary">
+                <i class="bi bi-robot fs-1 text-primary mb-3"></i>
+                <h4 class="fw-bold">AI Therapist</h4>
+                <p class="text-muted">Powered by Gemini Pro, our bot listens without judgment and offers helpful coping strategies instantly.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="p-4 h-100 bg-white shadow-sm rounded-4 border-bottom border-4 border-success">
+                <i class="bi bi-incognito fs-1 text-success mb-3"></i>
+                <h4 class="fw-bold">Anonymous Groups</h4>
+                <p class="text-muted">Join community discussions with "Incognito Mode." Share your story safely without revealing your identity.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="p-4 h-100 bg-white shadow-sm rounded-4 border-bottom border-4 border-danger">
+                <i class="bi bi-graph-heart fs-1 text-danger mb-3"></i>
+                <h4 class="fw-bold">Mood Tracking</h4>
+                <p class="text-muted">Our dashboard analyzes your conversations to create visual reports of your stress and mood levels over time.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container pb-5">
+    <div class="bg-light p-5 rounded-4 text-center">
+        <h2 class="fw-bold mb-3">Why we built this?</h2>
+        <p class="text-muted mb-0" style="max-width: 800px; margin: 0 auto;">
+            As students, we noticed how difficult it is to find accessible mental health support. 
+            Professional therapy is expensive, and talking to friends can be intimidating. 
+            <strong>HealChat AI</strong> bridges that gap by using technology to provide immediate, 
+            private, and free emotional support for everyone.
+        </p>
+    </div>
+</div>
+{% endblock %}

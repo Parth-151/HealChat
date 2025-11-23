@@ -33,6 +33,7 @@ class GroupMessage(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     # who has seen this message (many-to-many to User)
     seen_by = models.ManyToManyField(User, related_name="seen_group_messages", blank=True)
+    is_anonymous = models.BooleanField(default=False)
 
     class Meta:
         ordering = ("timestamp",)

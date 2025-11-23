@@ -11,7 +11,6 @@
         display: flex;
         flex-direction: column;
         background: #fff;
-        /* Fix for mobile to prevent hidden input */
         position: absolute; 
         top: 0; bottom: 0; left: 0; right: 0;
     }
@@ -23,7 +22,7 @@
         display: flex;
         flex-direction: column;
         gap: 15px;
-        padding-bottom: 80px; /* Space for composer */
+        padding-bottom: 80px;
     }
 
     /* Mood Bar */
@@ -36,6 +35,7 @@
         white-space: nowrap;
         background: #fff;
         flex-shrink: 0;
+        justify-content: space-evenly;
     }
     .mood-btn {
         font-size: 1.5rem;
@@ -68,16 +68,16 @@
         border-bottom-left-radius: 4px;
     }
 
-    /* Composer */
+    /* Composer with Mic */
     .composer {
         padding: 15px;
         border-top: 1px solid #eee;
         display: flex;
         gap: 10px;
         background: #fff;
-        /* Stick to bottom */
         position: sticky;
         bottom: 0;
+        align-items: center;
     }
     .composer input {
         flex: 1;
@@ -93,9 +93,50 @@
         border-radius: 25px;
         padding: 0 20px;
         font-weight: 600;
+        height: 45px;
+    }
+    
+    /* New Mic Button Style */
+    #micBtn {
+        background: #ff9f43; /* Orange for Mic */
+        width: 45px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+    #micBtn.listening {
+        background: #ef4444; /* Red when recording */
+        animation: pulse 1.5s infinite;
     }
 
     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+    /* Add this to chat.html styles */
+.typing-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 12px;
+    background: #f1f5f9;
+    border-radius: 18px;
+    border-bottom-left-radius: 4px;
+    width: fit-content;
+}
+.dot {
+    width: 8px;
+    height: 8px;
+    background-color: #94a3b8;
+    border-radius: 50%;
+    animation: bounce 1.4s infinite ease-in-out both;
+}
+.dot:nth-child(1) { animation-delay: -0.32s; }
+.dot:nth-child(2) { animation-delay: -0.16s; }
+@keyframes bounce {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1); }
+}
 </style>
 
 <div class="modal fade" id="emergencyModal" tabindex="-1" data-bs-backdrop="static">
@@ -122,22 +163,16 @@
                 </div>
 
                 <hr>
-
                 <p class="mb-2 small text-muted">Or call a verified helpline:</p>
                 <div class="d-grid gap-2">
                     <a href="tel:14416" class="btn btn-outline-primary fw-bold text-start p-3 d-flex justify-content-between align-items-center">
-                        <span><i class="bi bi-heart-pulse-fill"></i> Tele-MANAS (Mental Health)</span>
-                        <span>14416</span>
+                        <span><i class="bi bi-heart-pulse-fill"></i> Tele-MANAS</span><span>14416</span>
                     </a>
-                    
                     <a href="tel:108" class="btn btn-outline-danger fw-bold text-start p-3 d-flex justify-content-between align-items-center">
-                        <span><i class="bi bi-ambulance"></i> Ambulance Service</span>
-                        <span>108</span>
+                        <span><i class="bi bi-ambulance"></i> Ambulance</span><span>108</span>
                     </a>
-
                     <a href="tel:112" class="btn btn-outline-dark fw-bold text-start p-3 d-flex justify-content-between align-items-center">
-                        <span><i class="bi bi-shield-fill-exclamation"></i> National Emergency</span>
-                        <span>112</span>
+                        <span><i class="bi bi-shield-fill-exclamation"></i> Emergency</span><span>112</span>
                     </a>
                 </div>
             </div>
@@ -147,32 +182,52 @@
         </div>
     </div>
 </div>
+
 <div class="chat-wrapper">
     <div class="mood-bar">
-        <span class="mood-btn" data-mood="I'm feeling Happy 😊" title="Happy">😊</span>
-        <span class="mood-btn" data-mood="I'm feeling Sad 😢" title="Sad">😢</span>
-        <span class="mood-btn" data-mood="I'm feeling Angry 😡" title="Angry">😡</span>
-        <span class="mood-btn" data-mood="I'm feeling Stressed 😰" title="Stressed">😰</span>
-        <span class="mood-btn" data-mood="I'm feeling Lonely 😭" title="Lonely">😭</span>
-        <span class="mood-btn" data-mood="I'm feeling Confused 🤔" title="Confused">🤔</span>
-        <span class="mood-btn" data-mood="I'm feeling Overwhelmed 🤯" title="Overwhelmed">🤯</span>
-        <span class="mood-btn" data-mood="I'm feeling Calm 😇" title="Calm">😇</span>
+        <select id="langSelect" class="form-select form-select-sm" style="width: auto; border-radius: 20px;">
+            <option value="en-IN">English</option>
+            <option value="hi-IN">Hindi</option>
+            <option value="gu-IN">Gujarati</option>
+        </select>
+        
+        <span class="mood-btn" data-mood="Happy 😊" title="Happy">😊</span>
+        <span class="mood-btn" data-mood="Sad 😢" title="Sad">😢</span>
+        <span class="mood-btn" data-mood="Angry 😡" title="Angry">😡</span>
+        <span class="mood-btn" data-mood="Stressed 😰" title="Stressed">😰</span>
+        <span class="mood-btn" data-mood="Calm 😇" title="Calm">😇</span>
+        <span class="mood-btn" data-mood="I feel Confused 🤔" title="Confused">🤔</span>
+        <span class="mood-btn" data-mood="I feel Tired 😴" title="Tired">😴</span>
+        <span class="mood-btn" data-mood="I feel Lonely 😔" title="Lonely">😔</span>
+        <span class="mood-btn" data-mood="I feel Excited 🤩" title="Excited">🤩</span>
+        <span class="mood-btn" data-mood="I feel Numb 😶" title="Numb">😶</span>
+        <span class="mood-btn" data-mood="I feel Grateful 🙏" title="Grateful">🙏</span>
+        <span class="mood-btn" data-mood="I feel Hopeful 🤞" title="Hopeful">🤞</span>
     </div>
 
     <div class="chat-window" id="aiChatBox">
-        <div class="bubble bot">
-            Hello {{ request.user.username }}! 👋 I'm your AI companion. How are you feeling right now?
+    <div id="emptyState" class="text-center mt-5 pt-5">
+        <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+            <i class="bi bi-robot fs-1 text-primary"></i>
         </div>
-    </div>
-
-    <div class="composer">
-        <input type="text" id="aiInput" placeholder="Type your thoughts here..." autocomplete="off">
-        <button id="aiSendBtn">Send</button>
+        <h4 class="fw-bold text-dark">HealChat AI</h4>
+        <p class="text-muted">I'm here to listen. Tell me how you're feeling.</p>
+        <div class="d-flex justify-content-center gap-2 mt-3">
+            <button class="btn btn-sm btn-outline-secondary rounded-pill" onclick="sendMessage('I feel anxious')">I feel anxious</button>
+            <button class="btn btn-sm btn-outline-secondary rounded-pill" onclick="sendMessage('I cannot sleep')">I can't sleep</button>
+        </div>
     </div>
 </div>
 
+    <div class="composer">
+        <button id="micBtn" onclick="toggleSpeech()" title="Speak"><i class="bi bi-mic-fill"></i></button>
+        
+        <input type="text" id="aiInput" placeholder="Type or speak..." autocomplete="off">
+        <button id="aiSendBtn"><i class="bi bi-send-fill"></i></button>
+    </div>
+</div>
 <script>
-    // --- 1. CSRF Token Helper ---
+    // --- 1. Configuration ---
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -189,15 +244,90 @@
     }
     const csrftoken = getCookie('csrftoken');
 
-    // --- 2. Chat Logic ---
     const chatBox = document.getElementById('aiChatBox');
     const input = document.getElementById('aiInput');
     const btn = document.getElementById('aiSendBtn');
+    const micBtn = document.getElementById('micBtn');
+    const langSelect = document.getElementById('langSelect');
 
+    // --- 2. Voice Logic (Fixed) ---
+    let recognition = null;
+    let listening = false;
+
+    if ('webkitSpeechRecognition' in window) {
+        recognition = new webkitSpeechRecognition();
+        recognition.interimResults = false;
+        recognition.continuous = false;
+
+        recognition.onstart = () => {
+            listening = true;
+            micBtn.classList.add("listening");
+            micBtn.innerHTML = '<i class="bi bi-stop-fill"></i>'; 
+            micBtn.title = "Stop Recording"; // <--- FIX: Update Title
+        };
+
+        recognition.onresult = (event) => {
+            const spoken = event.results[0][0].transcript;
+            input.value = spoken;
+        };
+
+        recognition.onend = () => {
+            stopSpeech(); // Always reset UI when done
+        };
+
+        recognition.onerror = (event) => {
+            // FIX: Handle 'no-speech' silently without alerts
+            if (event.error === 'no-speech') {
+                console.log("No speech detected. Stopping...");
+                stopSpeech();
+                return; 
+            }
+
+            console.error("Speech Error:", event.error);
+            
+            if (event.error === 'not-allowed') {
+                alert("Microphone access denied. Check browser settings.");
+            } else if (event.error === 'network') {
+                alert("Voice requires internet connection.");
+            }
+            
+            stopSpeech();
+        };
+    } else {
+        micBtn.style.display = 'none';
+        console.log("Voice not supported");
+    }
+
+    function toggleSpeech() {
+        if (!recognition) return;
+        
+        if (!listening) {
+            try {
+                recognition.lang = langSelect.value; 
+                recognition.start();
+            } catch(e) {
+                console.error("Mic Start Error:", e);
+                stopSpeech();
+            }
+        } else {
+            recognition.stop();
+            stopSpeech();
+        }
+    }
+
+    function stopSpeech() {
+    listening = false;
+    micBtn.classList.remove("listening");
+    micBtn.innerHTML = '<i class="bi bi-mic-fill"></i>'; 
+    micBtn.title = "Speak"; // <--- ADD THIS LINE
+}
+
+    // --- 3. Chat Logic (Existing) ---
     function addBubble(text, sender) {
+    const emptyState = document.getElementById('emptyState');
+    if (emptyState) emptyState.style.display = 'none';
         const div = document.createElement('div');
         div.className = `bubble ${sender}`;
-        // USE INNERHTML to preserve line breaks
         div.innerHTML = text.replace(/\n/g, '<br>'); 
         chatBox.appendChild(div);
         chatBox.scrollTop = chatBox.scrollHeight;
@@ -211,10 +341,9 @@
                 addBubble(msg.message, 'user');
                 if(msg.response) addBubble(msg.response, 'bot');
             });
-            // Scroll to bottom once loaded
             chatBox.scrollTop = chatBox.scrollHeight;
         } catch(err) {
-            console.error("History load error", err);
+            console.error("History error", err);
         }
     }
     loadHistory(); 
@@ -222,13 +351,22 @@
     async function sendMessage(msg) {
         addBubble(msg, 'user');
         
-        // Typing indicator
-        const loadingDiv = document.createElement('div');
-        loadingDiv.className = 'bubble bot';
-        loadingDiv.innerText = '...';
-        loadingDiv.id = 'typing';
-        chatBox.appendChild(loadingDiv);
-        chatBox.scrollTop = chatBox.scrollHeight;
+        
+
+// Show typing indicator
+const loadingDiv = document.createElement('div');
+loadingDiv.id = 'typing';
+loadingDiv.className = 'mb-2'; // Margin bottom
+loadingDiv.innerHTML = `
+    <div class="typing-indicator">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+    </div>`;
+chatBox.appendChild(loadingDiv);
+chatBox.scrollTop = chatBox.scrollHeight;
+
+// ... fetch request ...
 
         try {
             const res = await fetch("/api/chatbot/api/chat/", {
@@ -241,14 +379,12 @@
             });
             
             const data = await res.json();
-            
             document.getElementById('typing').remove();
             
             if(data.response) {
                 addBubble(data.response, 'bot');
             }
             
-            // --- NEW: EMERGENCY CHECK ---
             if (data.emergency_trigger === true) {
                 showEmergencyModal(data.emergency_contact);
             }
@@ -256,13 +392,22 @@
         } catch(err) {
             const typer = document.getElementById('typing');
             if(typer) typer.remove();
-            addBubble("⚠️ Network error. Please try again.", 'bot');
+            addBubble("⚠️ Network error.", 'bot');
         }
     }
 
-    // --- 3. Emergency Modal Logic ---
+    // --- 4. Emergency Modal Logic ---
+    // --- 4. Emergency Modal Logic (FIXED) ---
     function showEmergencyModal(contact) {
-        const modal = new bootstrap.Modal(document.getElementById('emergencyModal'));
+        const modalEl = document.getElementById('emergencyModal');
+        
+        // --- THE FIX: Move modal to body so it sits on top of backdrop ---
+        if (modalEl.parentElement !== document.body) {
+            document.body.appendChild(modalEl);
+        }
+        // -----------------------------------------------------------------
+
+        const modal = new bootstrap.Modal(modalEl);
         
         if (contact) {
             document.getElementById("contactInfoSection").classList.remove("d-none");
