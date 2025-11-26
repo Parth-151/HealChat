@@ -29,27 +29,37 @@
 
 <div class="container py-5">
     <div class="row text-center g-4">
+        
         <div class="col-md-4">
-            <div class="p-4 h-100 bg-white shadow-sm rounded-4 border-bottom border-4 border-primary">
-                <i class="bi bi-robot fs-1 text-primary mb-3"></i>
-                <h4 class="fw-bold">AI Therapist</h4>
-                <p class="text-muted">Powered by Gemini Pro, our bot listens without judgment and offers helpful coping strategies instantly.</p>
-            </div>
+            <a href="{% url 'chatbot:chat_page' %}" class="text-decoration-none text-dark">
+                <div class="p-4 h-100 bg-white shadow-sm rounded-4 border-bottom border-4 border-primary feature-card">
+                    <i class="bi bi-robot fs-1 text-primary mb-3"></i>
+                    <h4 class="fw-bold">AI Therapist</h4>
+                    <p class="text-muted">Powered by Gemini Pro, our bot listens without judgment and offers helpful coping strategies instantly.</p>
+                </div>
+            </a>
         </div>
+
         <div class="col-md-4">
-            <div class="p-4 h-100 bg-white shadow-sm rounded-4 border-bottom border-4 border-success">
-                <i class="bi bi-incognito fs-1 text-success mb-3"></i>
-                <h4 class="fw-bold">Anonymous Groups</h4>
-                <p class="text-muted">Join community discussions with "Incognito Mode." Share your story safely without revealing your identity.</p>
-            </div>
+            <a href="{% url 'group:group_chat' slug='community' %}" class="text-decoration-none text-dark">
+                <div class="p-4 h-100 bg-white shadow-sm rounded-4 border-bottom border-4 border-success feature-card">
+                    <i class="bi bi-incognito fs-1 text-success mb-3"></i>
+                    <h4 class="fw-bold">Anonymous Groups</h4>
+                    <p class="text-muted">Join community discussions with "Incognito Mode." Share your story safely without revealing your identity.</p>
+                </div>
+            </a>
         </div>
+
         <div class="col-md-4">
-            <div class="p-4 h-100 bg-white shadow-sm rounded-4 border-bottom border-4 border-danger">
-                <i class="bi bi-graph-heart fs-1 text-danger mb-3"></i>
-                <h4 class="fw-bold">Mood Tracking</h4>
-                <p class="text-muted">Our dashboard analyzes your conversations to create visual reports of your stress and mood levels over time.</p>
-            </div>
+            <a href="{% url 'chatbot:analysis_page' %}" class="text-decoration-none text-dark">
+                <div class="p-4 h-100 bg-white shadow-sm rounded-4 border-bottom border-4 border-danger feature-card">
+                    <i class="bi bi-bar-chart-line-fill fs-1 text-danger mb-3"></i>
+                    <h4 class="fw-bold">Mood Analysis</h4>
+                    <p class="text-muted">Our dashboard analyzes your conversations to create visual reports of your stress and mood levels over time.</p>
+                </div>
+            </a>
         </div>
+
     </div>
 </div>
 
@@ -59,7 +69,7 @@
         <p class="text-muted mb-0" style="max-width: 800px; margin: 0 auto;">
             As students, we noticed how difficult it is to find accessible mental health support. 
             Professional therapy is expensive, and talking to friends can be intimidating. 
-            <strong>HealChat AI</strong> bridges that gap by using technology to provide immediate, 
+            <strong>HealChat</strong> bridges that gap by using technology to provide immediate, 
             private, and free emotional support for everyone.
         </p>
     </div>

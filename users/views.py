@@ -1,4 +1,3 @@
-# users/views.py
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -11,25 +10,19 @@ from chatbot.models import AnalysisReport
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 
-# --- IMPORTS FROM GROUP APP ---
 from group.models import Group, DirectMessage
 import os
 
-# ... (keep your existing imports) ...
 
-# 1. Make sure you have this import if it's missing
 from django.shortcuts import render
 
-# 2. Add this NEW view function for Home
 def home(request):
     context = {}
-    # Only fetch sidebar data if logged in
     if request.user.is_authenticated:
         context = sidebar_context(request)
     
     return render(request, 'home.html', context)
 
-# ---------------- Sidebar Context Helper ---------------- #
 def sidebar_context(request):
     """
     Fetches Groups and Recent Chats for the Sidebar.
@@ -37,10 +30,8 @@ def sidebar_context(request):
     if not request.user.is_authenticated:
         return {}
 
-    # 1. Fetch Groups
     groups_sidebar = Group.objects.filter(members=request.user).order_by("-created_at")
 
-    # 2. Fetch Recent Direct Chats
     direct_msgs = DirectMessage.objects.filter(
         Q(sender=request.user) | Q(receiver=request.user)
     ).order_by("-timestamp").select_related('sender', 'receiver')
@@ -73,7 +64,6 @@ def sidebar_context(request):
         "recent_users": recent_users
     }
 
-# ---------------- Auth Views ---------------- #
 
 def login_page(request):
     if request.user.is_authenticated:
@@ -98,7 +88,6 @@ def logout_page(request):
     return redirect('/')
 
 def signup_view(request):
-    # If already logged in, redirect
     if request.user.is_authenticated:
         return redirect('group:chat_home')
 
@@ -108,17 +97,14 @@ def signup_view(request):
         pass1 = request.POST.get('password')
         pass2 = request.POST.get('confirm_password')
 
-        # Validation 1: Empty Fields
         if not username or not email or not pass1:
             messages.error(request, "Please fill in all fields.")
             return render(request, 'users/signup.html')
 
-        # Validation 2: Passwords Match
         if pass1 != pass2:
             messages.error(request, "Passwords do not match.")
             return render(request, 'users/signup.html')
 
-        # Validation 3: Uniqueness
         if User.objects.filter(username=username).exists():
             messages.error(request, "That username is already taken.")
             return render(request, 'users/signup.html')
@@ -126,8 +112,6 @@ def signup_view(request):
         if User.objects.filter(email=email).exists():
             messages.error(request, "Email already registered.")
             return render(request, 'users/signup.html')
-
-        # Validation 4: Password Strength
         try:
             validate_password(pass1)
         except ValidationError as e:
@@ -135,11 +119,9 @@ def signup_view(request):
                 messages.error(request, err)
             return render(request, 'users/signup.html')
 
-        # Creation
         try:
             user = User.objects.create_user(username=username, email=email, password=pass1)
             user.save()
-            # Profile created by signals usually, but good to be safe
             if not hasattr(user, 'profile'):
                 Profile.objects.create(user=user)
             
@@ -152,7 +134,6 @@ def signup_view(request):
 
     return render(request, 'users/signup.html')
 
-# ---------------- Profile Views ---------------- #
 
 @login_required
 def profile(request, username):
@@ -163,7 +144,6 @@ def profile(request, username):
     profile_obj = user_obj.profile
     is_owner = (request.user == user_obj)
 
-    # Get Stats
     last_report = AnalysisReport.objects.filter(user=user_obj).order_by('-timestamp').first()
     short_analysis = None
     if last_report:
@@ -173,10 +153,8 @@ def profile(request, username):
             "negative": last_report.negative_percentage,
         }
 
-    # Groups for Profile Card
     groups = Group.objects.filter(members=user_obj)
     
-    # --- SIDEBAR DATA ---
     context = sidebar_context(request)
     
     context.update({
@@ -229,12 +207,10 @@ def choose_avatar(request):
     context['avatars'] = avatars
     return render(request, "users/choose_avatar.html", context)
 
-# users/views.py
-from .models import Feedback # Import the model
+from .models import Feedback 
 
 @login_required
 def feedback_view(request):
-    # 1. Sidebar Context (So sidebar doesn't disappear)
     context = sidebar_context(request)
     
     if request.method == "POST":
@@ -242,7 +218,6 @@ def feedback_view(request):
         message = request.POST.get('message')
         rating = request.POST.get('rating')
         
-        # Save to DB
         Feedback.objects.create(
             user=request.user,
             subject=subject,
@@ -251,6 +226,6 @@ def feedback_view(request):
         )
         
         messages.success(request, "Thank you! Your feedback has been recorded.")
-        return redirect('home') # Redirects to home after submitting
+        return redirect('home') 
 
     return render(request, 'users/feedback.html', context)

@@ -3,48 +3,74 @@
 {% block content %}
 <style>
     .chat-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #fff; }
-    .chat-header { padding: 15px; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: space-between; background: #fff; }
-    .messages-area { flex: 1; padding: 20px; overflow-y: auto; background-image: radial-gradient(#e5e7eb 1px, transparent 1px); background-size: 20px 20px; }
+    
+    /* Header Styling */
+    .chat-header { 
+        padding: 10px 15px; 
+        border-bottom: 1px solid #eee; 
+        display: flex; 
+        align-items: center; 
+        background: #fff; 
+        gap: 15px;
+    }
+
+    .messages-area { 
+        flex: 1; 
+        padding: 20px; 
+        overflow-y: auto; 
+        background-image: radial-gradient(#e5e7eb 1px, transparent 1px); 
+        background-size: 20px 20px; 
+    }
     
     .message-bubble { max-width: 75%; padding: 10px 15px; border-radius: 15px; margin-bottom: 10px; position: relative; font-size: 0.95rem; }
     .msg-received { background: #f0f2f5; align-self: flex-start; border-bottom-left-radius: 2px; }
     .msg-sent { background: #6c5ce7; color: white; align-self: flex-end; margin-left: auto; border-bottom-right-radius: 2px; }
     
     .chat-input-area { padding: 15px; background: white; border-top: 1px solid #eee; }
-    .sender-name { font-size: 0.75rem; margin-bottom: 4px; font-weight: 600; color: #555; }
-    /* Add this to your existing <style> block */
-#micBtn {
-    background: #ff9f43; /* Orange */
-    border: none;
-    color: white;
-    width: 45px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-    transition: all 0.3s ease;
-}
-#micBtn:hover { background: #e67e22; }
-#micBtn.listening {
-    background: #ef4444; /* Red */
-    animation: pulse 1.5s infinite;
-}
-@keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+    /* Mic Button */
+    #micBtn {
+        background: #ff9f43; border: none; color: white; width: 45px; display: flex;
+        align-items: center; justify-content: center; font-size: 1.2rem; transition: all 0.3s ease;
+    }
+    #micBtn:hover { background: #e67e22; }
+    #micBtn.listening { background: #ef4444; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 </style>
 
 <div class="chat-container">
     <div class="chat-header shadow-sm">
         <a href="{% url 'users:profile' other_user.username %}" class="d-flex align-items-center gap-3 text-decoration-none text-dark">
-            <img src="{{ other_user.profile.get_avatar_url }}" class="avatar-circle">
+            <div class="position-relative">
+                <img src="{{ other_user.profile.get_avatar_url }}" class="avatar-circle" style="width: 45px; height: 45px;">
+                <span id="online-indicator" class="position-absolute bottom-0 end-0 bg-success border border-white rounded-circle" 
+                      style="width: 12px; height: 12px; display: {% if other_user.profile.is_online %}block{% else %}none{% endif %};">
+                </span>
+            </div>
+            
             <div>
                 <h5 class="m-0 fw-bold">{{ other_user.username }}</h5>
-                <small class="text-muted">Direct Message</small>
+                
+                <small class="text-muted" id="status-text">
+                    {% if other_user.profile.is_online %}
+                        <span class="text-success fw-bold">Online</span>
+                    {% else %}
+                        Last seen: {{ other_user.profile.last_seen|timesince }} ago
+                    {% endif %}
+                </small>
             </div>
         </a>
     </div>
 
     <div class="messages-area d-flex flex-column" id="chat-box">
         {% for m in chat_messages %}
+            
+            {% ifchanged m.timestamp.date %}
+                <div class="text-center my-3">
+                    <span class="badge bg-light text-secondary border rounded-pill px-3 py-1">{{ m.timestamp|date:"M d, Y" }}</span>
+                </div>
+            {% endifchanged %}
+
             <div class="message-bubble {% if m.sender == request.user %}msg-sent{% else %}msg-received{% endif %}">
                 {{ m.content|linebreaksbr }}
                 <div class="text-end opacity-75" style="font-size: 0.7rem; margin-top: 4px;">
@@ -60,43 +86,57 @@
     </div>
 
     <div class="chat-input-area">
-    <div class="input-group">
-        <button class="btn" type="button" id="micBtn" onclick="toggleSpeech()">
-            <i class="bi bi-mic-fill"></i>
-        </button>
-        
-        <input type="text" id="msgInput" class="form-control border-0 bg-light" placeholder="Type or speak..." style="padding: 12px;">
-        
-        <button id="sendBtn" class="btn btn-primary px-4"><i class="bi bi-send-fill"></i></button>
+        <div class="input-group">
+            <button class="btn" type="button" id="micBtn" onclick="toggleSpeech()"><i class="bi bi-mic-fill"></i></button>
+            <input type="text" id="msgInput" class="form-control border-0 bg-light" placeholder="Type a message..." style="padding: 12px;">
+            <button id="sendBtn" class="btn btn-primary px-4"><i class="bi bi-send-fill"></i></button>
+        </div>
     </div>
 </div>
-</div>
+
 <script>
-    const other = "{{ other_user.username }}";
+    const otherUserId = "{{ other_user.id }}";
+    const otherUserName = "{{ other_user.username }}";
     const currentUser = "{{ request.user.username }}";
     const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
-    const url = `${wsScheme}://${window.location.host}/ws/direct/${other}/`;
+    const url = `${wsScheme}://${window.location.host}/ws/direct/${otherUserName}/`;
+    
     const sock = new WebSocket(url);
     const chatBox = document.getElementById("chat-box");
+    
+    // Elements for Status
+    const statusText = document.getElementById("status-text");
+    const onlineIndicator = document.getElementById("online-indicator");
 
-    // Scroll to bottom on load
     chatBox.scrollTop = chatBox.scrollHeight;
 
     sock.onmessage = (ev) => {
-        const d = JSON.parse(ev.data); // Variable is 'd' here
-        const isMe = d.sender === currentUser;
+        const data = JSON.parse(ev.data);
         
+        // --- 1. HANDLE STATUS UPDATES ---
+        if (data.type === "user_status") {
+            // Only update if the status belongs to the person we are chatting with
+            if (data.user_id == otherUserId) {
+                if (data.status === "online") {
+                    statusText.innerHTML = '<span class="text-success fw-bold">Online</span>';
+                    onlineIndicator.style.display = "block";
+                } else {
+                    statusText.innerHTML = 'Last seen: Just now';
+                    onlineIndicator.style.display = "none";
+                }
+            }
+            return; // Stop execution here, don't add a bubble
+        }
+
+        // --- 2. HANDLE MESSAGES ---
+        const isMe = data.sender === currentUser;
         const div = document.createElement("div");
         div.className = `message-bubble ${isMe ? 'msg-sent' : 'msg-received'}`;
         
-        // --- TIME FIX START ---
-        // Use 'd.timestamp', fallback to current time if missing
-        const date = new Date(d.timestamp || Date.now());
+        const date = new Date(data.timestamp || Date.now());
         const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        // --- TIME FIX END ---
 
-        let html = "";
-        html += `${d.message.replace(/\n/g, '<br>')}`;
+        let html = `${data.message.replace(/\n/g, '<br>')}`;
         html += `<div class="text-end opacity-75" style="font-size: 0.7rem; margin-top: 4px;">${timeStr}</div>`;
 
         div.innerHTML = html;
@@ -104,14 +144,13 @@
         chatBox.scrollTop = chatBox.scrollHeight;
     };
 
+    // --- SEND LOGIC ---
     const input = document.getElementById("msgInput");
     const btn = document.getElementById("sendBtn");
 
     if(btn){
         btn.onclick = sendMessage;
-        input.onkeyup = function(e) {
-            if (e.keyCode === 13) sendMessage();
-        };
+        input.onkeyup = function(e) { if (e.keyCode === 13) sendMessage(); };
     }
 
     function sendMessage() {
@@ -121,63 +160,43 @@
             input.value = "";
         }
     }
-    // --- VOICE LOGIC START ---
-const micBtn = document.getElementById("micBtn");
-const msgInput = document.getElementById("msgInput"); // Note: Group chat uses 'msgInput', not 'aiInput'
 
-let recognition = null;
-let listening = false;
+    // --- VOICE LOGIC ---
+    const micBtn = document.getElementById("micBtn");
+    let recognition = null;
+    let listening = false;
 
-if ('webkitSpeechRecognition' in window) {
-    recognition = new webkitSpeechRecognition();
-    recognition.lang = 'en-IN'; // Default to Indian English (Good for Hinglish)
-    recognition.interimResults = false;
-    recognition.continuous = false;
+    if ('webkitSpeechRecognition' in window) {
+        recognition = new webkitSpeechRecognition();
+        recognition.lang = 'en-IN'; 
+        recognition.interimResults = false;
+        recognition.continuous = false;
 
-    recognition.onstart = () => {
-        listening = true;
-        micBtn.classList.add("listening");
-        micBtn.innerHTML = '<i class="bi bi-stop-fill"></i>'; 
-    };
-
-    recognition.onresult = (event) => {
-        const spoken = event.results[0][0].transcript;
-        msgInput.value = spoken; // Puts text into input
-        // Optional: Auto-send
-        // sendMessage(); 
-    };
-
-    recognition.onend = () => {
-        stopSpeech();
-    };
-
-    recognition.onerror = (event) => {
-        console.error("Speech Error:", event.error);
-        if(event.error !== 'no-speech') {
-            // alert("Voice Error: " + event.error); // Optional: Enable if you want alerts
-        }
-        stopSpeech();
-    };
-} else {
-    if(micBtn) micBtn.style.display = 'none'; // Hide if not supported
-}
-
-function toggleSpeech() {
-    if (!recognition) return;
-    if (!listening) {
-        recognition.start();
+        recognition.onstart = () => {
+            listening = true;
+            micBtn.classList.add("listening");
+            micBtn.innerHTML = '<i class="bi bi-stop-fill"></i>'; 
+        };
+        recognition.onresult = (event) => { input.value = event.results[0][0].transcript; };
+        recognition.onend = () => { stopSpeech(); };
+        recognition.onerror = (event) => { if(event.error !== 'no-speech') stopSpeech(); };
     } else {
-        recognition.stop();
+        if(micBtn) micBtn.style.display = 'none';
     }
-}
 
-function stopSpeech() {
-    listening = false;
-    if(micBtn) {
-        micBtn.classList.remove("listening");
-        micBtn.innerHTML = '<i class="bi bi-mic-fill"></i>';
+    function toggleSpeech() {
+        if (!recognition) return;
+        if (!listening) { recognition.start(); } else { recognition.stop(); }
     }
-}
-// --- VOICE LOGIC END ---
+
+    function stopSpeech() {
+        listening = false;
+        if(micBtn) {
+            micBtn.classList.remove("listening");
+            micBtn.innerHTML = '<i class="bi bi-mic-fill"></i>';
+        }
+    }
+    if(micBtn) micBtn.onclick = toggleSpeech;
+
 </script>
 {% endblock %}

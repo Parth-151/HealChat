@@ -251,6 +251,10 @@
     const langSelect = document.getElementById('langSelect');
 
     // --- 2. Voice Logic (Fixed) ---
+    // --- 2. Voice Logic (Updated) ---
+    const micButton = document.getElementById("micBtn");
+    const voiceInput = document.getElementById("aiInput"); // specific for AI chat
+
     let recognition = null;
     let listening = false;
 
@@ -259,69 +263,63 @@
         recognition.interimResults = false;
         recognition.continuous = false;
 
+        // When recording starts
         recognition.onstart = () => {
             listening = true;
-            micBtn.classList.add("listening");
-            micBtn.innerHTML = '<i class="bi bi-stop-fill"></i>'; 
-            micBtn.title = "Stop Recording"; // <--- FIX: Update Title
+            micButton.classList.add("listening");
+            // Change Icon to STOP SQUARE
+            micButton.innerHTML = '<i class="bi bi-stop-circle-fill"></i>'; 
+            micButton.title = "Stop Recording";
         };
 
+        // When text is detected
         recognition.onresult = (event) => {
             const spoken = event.results[0][0].transcript;
-            input.value = spoken;
+            if(voiceInput) voiceInput.value = spoken;
         };
 
+        // When recording ends
         recognition.onend = () => {
-            stopSpeech(); // Always reset UI when done
+            stopSpeech();
         };
 
+        // Handle Errors
         recognition.onerror = (event) => {
-            // FIX: Handle 'no-speech' silently without alerts
-            if (event.error === 'no-speech') {
-                console.log("No speech detected. Stopping...");
-                stopSpeech();
-                return; 
+            if(event.error !== 'no-speech') {
+                console.error("Voice error:", event.error);
             }
-
-            console.error("Speech Error:", event.error);
-            
-            if (event.error === 'not-allowed') {
-                alert("Microphone access denied. Check browser settings.");
-            } else if (event.error === 'network') {
-                alert("Voice requires internet connection.");
-            }
-            
             stopSpeech();
         };
     } else {
-        micBtn.style.display = 'none';
-        console.log("Voice not supported");
+        if(micButton) micButton.style.display = 'none';
     }
 
+    // Toggle Function
     function toggleSpeech() {
         if (!recognition) return;
         
         if (!listening) {
-            try {
-                recognition.lang = langSelect.value; 
-                recognition.start();
-            } catch(e) {
-                console.error("Mic Start Error:", e);
-                stopSpeech();
-            }
+            // Update Language from dropdown
+            if(langSelect) recognition.lang = langSelect.value;
+            recognition.start();
         } else {
             recognition.stop();
-            stopSpeech();
         }
     }
 
+    // Reset UI Function
     function stopSpeech() {
-    listening = false;
-    micBtn.classList.remove("listening");
-    micBtn.innerHTML = '<i class="bi bi-mic-fill"></i>'; 
-    micBtn.title = "Speak"; // <--- ADD THIS LINE
-}
-
+        listening = false;
+        if(micButton) {
+            micButton.classList.remove("listening");
+            // Change Icon back to MIC
+            micButton.innerHTML = '<i class="bi bi-mic-fill"></i>';
+            micButton.title = "Speak";
+        }
+    }
+    
+    // Attach Click Event
+    if(micButton) micButton.onclick = toggleSpeech;
     // --- 3. Chat Logic (Existing) ---
     function addBubble(text, sender) {
     const emptyState = document.getElementById('emptyState');

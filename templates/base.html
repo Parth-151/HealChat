@@ -10,7 +10,6 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     
     <style>
-    /* --- GLOBAL VARS --- */
     :root {
         --sidebar-width: 280px;
         --primary-color: #6c5ce7;
@@ -29,7 +28,6 @@
         padding: 0;
     }
 
-    /* --- SIDEBAR STYLES --- */
     .sidebar {
         width: var(--sidebar-width);
         height: 100vh;
@@ -52,7 +50,6 @@
     .sidebar-scroll-area::-webkit-scrollbar { width: 5px; }
     .sidebar-scroll-area::-webkit-scrollbar-thumb { background: #e9ecef; border-radius: 4px; }
 
-    /* --- MAIN CONTENT AREA --- */
     .main-content {
         position: absolute;
         top: 0; right: 0; bottom: 0;
@@ -63,7 +60,6 @@
         flex-direction: column;
         transition: left 0.3s ease;
         
-        /* FIX 1: ANIMATION ON CONTENT ONLY */
         animation: fadeInContent 0.4s ease-out forwards;
     }
 
@@ -72,27 +68,23 @@
         to { opacity: 1; transform: translateY(0); }
     }
 
-    /* --- GUEST MODE (No Sidebar) --- */
     body.guest-mode .main-content {
         left: 0 !important;
         width: 100% !important;
-        /* FIX 2: Add top padding so Login/Signup don't stick to edge */
         padding-top: 40px; 
     }
 
-    /* --- RESPONSIVE (Mobile) --- */
     @media (max-width: 992px) {
         .sidebar { transform: translateX(-100%); }
         .sidebar.active { transform: translateX(0); box-shadow: 5px 0 15px rgba(0,0,0,0.1); }
         .main-content { left: 0; width: 100%; }
         
-        /* Push content down when Logged In (so Header doesn't cover it) */
         body:not(.guest-mode) .main-content {
             padding-top: var(--header-height); 
         }
     }
 
-    /* Utility */
+
     .nav-link.active {
         background-color: #eef2ff;
         color: var(--primary-color);
@@ -110,6 +102,15 @@
         width: 90%; max-width: 400px; pointer-events: none;
     }
     .alert-float .alert { pointer-events: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+   
+    .feature-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .feature-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+        background-color: #fdfdfd;
+    }
 </style>
 </head>
 <body class="{% if not user.is_authenticated %}guest-mode{% endif %}">
@@ -254,7 +255,6 @@
         document.getElementById('sidebar').classList.toggle('active');
     }
 
-    // Search Logic (Only runs if sidebar exists)
     const searchInput = document.getElementById('sidebarSearch');
     if(searchInput) {
         const defaultView = document.getElementById('defaultSidebar');
@@ -302,7 +302,6 @@
         });
     }
 
-    // WebSocket Notification Listener
     {% if request.user.is_authenticated %}
         const notifyScheme = window.location.protocol === "https:" ? "wss" : "ws";
         const notifyUrl = `${notifyScheme}://${window.location.host}/ws/notifications/`;

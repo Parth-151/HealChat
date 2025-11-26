@@ -176,3 +176,5 @@ REST_FRAMEWORK = {
 
 API_KEY = config("CHAT_API_KEY")
 API_URL = config("API_Url")
+
+LOGIN_URL = '/users/login'

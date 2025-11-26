@@ -2,7 +2,6 @@ from django.db import models
 from django.conf import settings
 from django.contrib.auth import get_user_model
 
-# Create your models here.
 User = settings.AUTH_USER_MODEL
 
 class Group(models.Model):
@@ -31,7 +30,6 @@ class GroupMessage(models.Model):
     sender = models.ForeignKey(User, on_delete=models.CASCADE)
     content = models.TextField(blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
-    # who has seen this message (many-to-many to User)
     seen_by = models.ManyToManyField(User, related_name="seen_group_messages", blank=True)
     is_anonymous = models.BooleanField(default=False)
 

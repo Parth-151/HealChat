@@ -4,7 +4,6 @@ import os
 
 def upload_avatar(instance, filename):
     return f"avatars/{instance.user.username}/{filename}"
-# users/models.py (only show Profile part)
 from django.utils import timezone
 
 class Profile(models.Model):
@@ -15,7 +14,6 @@ class Profile(models.Model):
     emergency_name = models.CharField(max_length=100, blank=True, null=True)
     emergency_phone = models.CharField(max_length=20, blank=True, null=True)
 
-    # presence
     last_seen = models.DateTimeField(blank=True, null=True)
 
     def get_avatar_url(self):
@@ -42,3 +40,9 @@ class Feedback(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.subject}"
+    
+
+def is_online(self):
+    if not self.last_seen:
+        return False
+    return (timezone.now() - self.last_seen).total_seconds() < 300

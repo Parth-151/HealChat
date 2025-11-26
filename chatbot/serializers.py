@@ -6,9 +6,6 @@ from rest_framework.validators import UniqueValidator
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only = True)
 
-    # username = serializers.CharField(validators=[UniqueValidator(queryset=User.objects.all())])
-    # email = serializers.EmailField(validators=[UniqueValidator(queryset=User.objects.all())])
-
 
     class Meta:
         model = User
@@ -23,8 +20,6 @@ class RegisterSerializer(serializers.ModelSerializer):
         if data['email']:
             if User.objects.filter(email = data['email']).exists():
                 raise serializers.ValidationError('Email is already taken')
-        # if len(data['password']) < 6:
-        #     raise serializers.ValidationError('Password must be at least 6 characters long')
 
         return data
     
@@ -37,7 +32,6 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField()
 
 class MessageSerializer(serializers.ModelSerializer):
-    # response = serializers.CharField(read_only=True)
 
     class Meta:
         model = ChatMessage

@@ -1,4 +1,3 @@
-# users/middleware.py
 from django.utils import timezone
 from django.conf import settings
 

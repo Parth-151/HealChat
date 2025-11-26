@@ -1,7 +1,5 @@
 from django.contrib import admin
 from .models import  Profile, Feedback
-# Register your models here.
-# admin.site.register(FriendRequest)
 admin.site.register(Profile)
 
 @admin.register(Feedback)
