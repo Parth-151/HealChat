@@ -140,7 +140,6 @@
 
     chatBox.scrollTop = chatBox.scrollHeight;
 
-    // WEBSOCKET 
 
     socket.onmessage = function(e) {
         const data = JSON.parse(e.data);
@@ -156,10 +155,8 @@
 
         let html = "";
         
-        // --- SENDER HEADER LOGIC ---
         if (isMe) {
             if (data.is_anonymous) {
-                // I sent this anonymously -> Show "You (Anonymous)" label
                 html += `
                 <div class="d-flex align-items-center gap-1 mb-1" style="font-size: 0.75rem; opacity: 0.9; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 2px;">
                     <i class="bi bi-eye-slash-fill"></i> <strong>You (Anonymous)</strong>
@@ -169,7 +166,6 @@
             if (data.is_anonymous || data.sender === "Anonymous") {
                 html += `<div class="sender-name text-muted"><i class="bi bi-incognito"></i> Anonymous</div>`;
             } else {
-                // Real Name
                 html += `<div class="sender-name">${data.sender}</div>`;
             }
         }
@@ -209,7 +205,6 @@
         }
     }
 
-    // VOICE
     if ('webkitSpeechRecognition' in window) {
         recognition = new webkitSpeechRecognition();
         recognition.lang = 'en-IN'; 

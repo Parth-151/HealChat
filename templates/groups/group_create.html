@@ -76,16 +76,14 @@
 </div>
 
 <script>
-    // This script listens to the "Name" field and automatically
-    // creates a URL-friendly "Slug" (e.g., "My Group" -> "my-group")
     
-    const nameInput = document.getElementById('id_name'); // Django default ID
-    const slugInput = document.getElementById('id_slug'); // Django default ID
+    
+    const nameInput = document.getElementById('id_name'); 
+    const slugInput = document.getElementById('id_slug');
 
     if(nameInput && slugInput) {
         nameInput.addEventListener('keyup', function() {
             let val = this.value.toLowerCase();
-            // Replace spaces with dashes and remove non-alphanumeric chars
             val = val.replace(/\s+/g, '-').replace(/[^\w\-]+/g, '');
             slugInput.value = val;
         });

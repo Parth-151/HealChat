@@ -227,7 +227,6 @@
     </div>
 </div>
 <script>
-    // --- 1. Configuration ---
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -250,10 +249,8 @@
     const micBtn = document.getElementById('micBtn');
     const langSelect = document.getElementById('langSelect');
 
-    // --- 2. Voice Logic (Fixed) ---
-    // --- 2. Voice Logic (Updated) ---
     const micButton = document.getElementById("micBtn");
-    const voiceInput = document.getElementById("aiInput"); // specific for AI chat
+    const voiceInput = document.getElementById("aiInput"); 
 
     let recognition = null;
     let listening = false;
@@ -263,30 +260,27 @@
         recognition.interimResults = false;
         recognition.continuous = false;
 
-        // When recording starts
+        recognition.lang = langSelect ? langSelect.value : 'en-IN';
+
         recognition.onstart = () => {
             listening = true;
             micButton.classList.add("listening");
-            // Change Icon to STOP SQUARE
             micButton.innerHTML = '<i class="bi bi-stop-circle-fill"></i>'; 
             micButton.title = "Stop Recording";
         };
 
-        // When text is detected
         recognition.onresult = (event) => {
             const spoken = event.results[0][0].transcript;
             if(voiceInput) voiceInput.value = spoken;
         };
 
-        // When recording ends
         recognition.onend = () => {
             stopSpeech();
         };
 
-        // Handle Errors
         recognition.onerror = (event) => {
-            if(event.error !== 'no-speech') {
-                console.error("Voice error:", event.error);
+            if (event.error !== 'no-speech') {
+                console.error("Voice Error:", event.error);
             }
             stopSpeech();
         };
@@ -294,12 +288,10 @@
         if(micButton) micButton.style.display = 'none';
     }
 
-    // Toggle Function
     function toggleSpeech() {
         if (!recognition) return;
         
         if (!listening) {
-            // Update Language from dropdown
             if(langSelect) recognition.lang = langSelect.value;
             recognition.start();
         } else {
@@ -307,20 +299,16 @@
         }
     }
 
-    // Reset UI Function
     function stopSpeech() {
         listening = false;
         if(micButton) {
             micButton.classList.remove("listening");
-            // Change Icon back to MIC
-            micButton.innerHTML = '<i class="bi bi-mic-fill"></i>';
+            micButton.innerHTML = '<i class="bi bi-mic-fill"></i>'; 
             micButton.title = "Speak";
         }
     }
     
-    // Attach Click Event
     if(micButton) micButton.onclick = toggleSpeech;
-    // --- 3. Chat Logic (Existing) ---
     function addBubble(text, sender) {
     const emptyState = document.getElementById('emptyState');
     if (emptyState) emptyState.style.display = 'none';
@@ -351,10 +339,9 @@
         
         
 
-// Show typing indicator
 const loadingDiv = document.createElement('div');
 loadingDiv.id = 'typing';
-loadingDiv.className = 'mb-2'; // Margin bottom
+loadingDiv.className = 'mb-2'; 
 loadingDiv.innerHTML = `
     <div class="typing-indicator">
         <div class="dot"></div>
@@ -364,7 +351,6 @@ loadingDiv.innerHTML = `
 chatBox.appendChild(loadingDiv);
 chatBox.scrollTop = chatBox.scrollHeight;
 
-// ... fetch request ...
 
         try {
             const res = await fetch("/api/chatbot/api/chat/", {
@@ -394,16 +380,12 @@ chatBox.scrollTop = chatBox.scrollHeight;
         }
     }
 
-    // --- 4. Emergency Modal Logic ---
-    // --- 4. Emergency Modal Logic (FIXED) ---
     function showEmergencyModal(contact) {
         const modalEl = document.getElementById('emergencyModal');
         
-        // --- THE FIX: Move modal to body so it sits on top of backdrop ---
         if (modalEl.parentElement !== document.body) {
             document.body.appendChild(modalEl);
         }
-        // -----------------------------------------------------------------
 
         const modal = new bootstrap.Modal(modalEl);
         
@@ -415,7 +397,6 @@ chatBox.scrollTop = chatBox.scrollHeight;
         modal.show();
     }
 
-    // Event Listeners
     btn.addEventListener('click', () => {
         const txt = input.value.trim();
         if(txt) {
