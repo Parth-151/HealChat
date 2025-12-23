@@ -92,12 +92,15 @@ Add screenshots in the `/screenshots` folder and link them below.
 
 - **Home Page**
   ![Home](screenshots/home.png)
-  
-- **Login & Registration Page**  
+
+- **Login Page**  
   ![Login](screenshots/login.png)
 
 - **AI Chatbot Interface**  
   ![AI Chat](screenshots/ai_chat.png)
+
+**Emergency Alert**  
+  ![Analysis](screenshots/emergency.png)
 
 - **Direct Messaging**  
   ![Direct Chat](screenshots/direct_chat.png)
@@ -107,6 +110,12 @@ Add screenshots in the `/screenshots` folder and link them below.
 
 - **Emotion Analysis Dashboard**  
   ![Analysis](screenshots/analysis.png)
+
+- **Profile Page**  
+  ![Group Chat](screenshots/profile.png)
+
+- **Feedback Page**  
+  ![Analysis](screenshots/feedback.png)
 
 ---
 
