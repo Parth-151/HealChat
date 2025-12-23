@@ -60,7 +60,6 @@ HealChat/
 │   ├── views.py
 │   ├── models.py
 │   ├── serializers.py
-│   ├── templates/chatbot/
 │
 ├── group/
 │   ├── models.py
@@ -72,10 +71,12 @@ HealChat/
 ├── users/
 │   ├── models.py
 │   ├── middleware.py
-│   ├── templates/users/
+│   ├── views.py
+│   ├── forms.py
 │
 ├── templates/
-│   ├── chat_base.html
+│   ├── chatbot/
+│   ├── users/
 │
 ├── static/
 ├── media/
@@ -88,9 +89,7 @@ HealChat/
 ```
 ## 📸 Screenshots
 
-Add screenshots in the `/screenshots` folder and link them below.
-
-- **Home Page**
+- **Home Page**  
   ![Home](screenshots/home.png)
 
 - **Login Page**  
@@ -123,7 +122,7 @@ Add screenshots in the `/screenshots` folder and link them below.
 
 ### 1️⃣ Clone the Repository
 ```bash
-git clone https://github.com/your-username/HealChat.git
+git clone https://github.com/Parth-151/HealChat.git
 cd HealChat
 ```
 ### 2️⃣ Create Virtual Environment
@@ -140,12 +139,11 @@ Linux / macOS
 source venv/bin/activate
 ```
 ### 3️⃣ Install Dependencies
-bash
-Copy code
+```bash
 pip install -r requirements.txt
+```
 ### 4️⃣ Environment Variables (IMPORTANT)
 Create a .env file in the root directory and add:
-env
 ```bash
 API_KEY=your_ai_api_key_here
 API_URL=your_ai_api_url_here
@@ -171,10 +169,10 @@ Open:
 ## 🔌 WebSocket Configuration
 HealChat uses Django Channels for real-time chat.
 Ensure the following:
-channels installed
-ASGI_APPLICATION set in settings.py
-asgi.py configured using ProtocolTypeRouter
-Channel layer enabled (Redis or In-Memory)
+- channels installed
+- ASGI_APPLICATION set in settings.py
+- asgi.py configured using ProtocolTypeRouter
+- Channel layer enabled (Redis or In-Memory)
 Example (settings.py):
 ```bash
 ASGI_APPLICATION = "MindWell_AI.asgi.application"
